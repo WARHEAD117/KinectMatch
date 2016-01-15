@@ -652,7 +652,62 @@ namespace Microsoft.Samples.Kinect.SkeletonRecord
             UpdateInfo();
 
             //this.Title = string.Concat("TimerWindow  ", DateTime.Now.ToString("yyyy-MM-dd hh:mm:ss"));
+            SelfController();
         }
+
+        bool isShowMode = false;
+        void SelfController()
+        {
+            //按1进入showmode, 按2恢复
+            if (Keyboard.IsKeyDown(Key.D1))
+            {
+                if (!isShowMode)
+                {
+                    isShowMode = true;
+                    SetShowMode();
+                }
+            }
+            if (Keyboard.IsKeyDown(Key.D2))
+            {
+                if (isShowMode)
+                {
+                    isShowMode = false;
+                    SetDebugMode();
+                }
+            }
+
+        }
+
+        void SetShowMode()
+        {
+            //---------------------------------------------------------
+            // 去掉边框放置在左上角   
+            this.Left = -10.0;
+            this.Top = 0.0;
+            this.Width = this.m_showWidth + 20;
+            this.Height = this.m_showHeight;
+
+            this.WindowState = System.Windows.WindowState.Normal;
+            this.WindowStyle = System.Windows.WindowStyle.None;
+            this.ResizeMode = System.Windows.ResizeMode.NoResize;
+            this.Topmost = true;
+        }
+
+        void SetDebugMode()
+        {
+            //---------------------------------------------------------
+            // 去掉边框放置在左上角   
+            this.Left = 0.0;
+            this.Top = 0.0;
+            this.Width = this.m_showWidth + 50;
+            this.Height = this.m_showHeight + 50;
+
+            this.WindowState = System.Windows.WindowState.Normal;
+            this.WindowStyle = System.Windows.WindowStyle.SingleBorderWindow;
+            this.ResizeMode = System.Windows.ResizeMode.CanResize;
+            this.Topmost = false;
+        }
+
 
         private void UpdateInfo()
         {
