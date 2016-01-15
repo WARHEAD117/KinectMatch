@@ -2,7 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="SkeletonRecord" 
-        Height="850" Width="600" 
+        Height="1930" Width="1100" 
         Loaded="MainWindow_Loaded"
         Closing="MainWindow_Closing">
     <Window.Resources>
@@ -12,15 +12,15 @@
     </Window.Resources>
     <Grid Margin="10 0 10 0">
         <Grid.RowDefinitions>
-            <RowDefinition Height="768" />
+            <RowDefinition Height="1930" />
             <RowDefinition Height="100"/>
         </Grid.RowDefinitions>
         
         
-        <Canvas Grid.Row="0" HorizontalAlignment="Left" Width="432" Height="768" ClipToBounds="True">
-            <Image Source="{Binding ShowPic}" Canvas.Left="-100" Canvas.Top="-100" Stretch="None" />
+        <Canvas Grid.Row="0" HorizontalAlignment="Left" Width="1100" Height="1930" ClipToBounds="True">
+            <Image Source="{Binding ShowPic}" Canvas.Left="-250" Canvas.Top="-250" Stretch="None" />
         </Canvas>
-        <Viewbox Grid.Row="0" HorizontalAlignment="Left" VerticalAlignment="Top" Height="136" Width="118" >
+        <Viewbox Grid.Row="0" HorizontalAlignment="Left" VerticalAlignment="Top" Height="342" Width="295" >
             <Image Source="{Binding ImageSource}" HorizontalAlignment="Center" VerticalAlignment="Center"  Stretch="UniformToFill" ClipToBounds="True" />
         </Viewbox>
         <StatusBar Grid.Row="1" HorizontalAlignment="Stretch" Name="statusBar" VerticalAlignment="Bottom" Background="White" Foreground="{StaticResource MediumGreyBrush}">

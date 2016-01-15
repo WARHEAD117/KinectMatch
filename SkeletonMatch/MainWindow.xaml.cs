@@ -543,9 +543,9 @@ namespace Microsoft.Samples.Kinect.SkeletonRecord
                 using (DrawingContext dc = this.drawingGroup.Open())
                 {
                     // Draw a transparent background to set the render size
-                    dc.DrawRectangle(Brushes.Black, null, new Rect(0.0, 0.0, 160/*this.displayWidth*/, 240/*this.displayHeight*/));
+                    dc.DrawRectangle(Brushes.Black, null, new Rect(0.0, 0.0, 295/*this.displayWidth*/, 342/*this.displayHeight*/));
 
-                    dc.DrawImage(colorBitmap, new Rect(-75, 0, (int)(m_kinectDrawHeight * (16.0f / 9.0f)), m_kinectDrawHeight));
+                    dc.DrawImage(colorBitmap, new Rect(-187, 0, (int)(m_kinectDrawHeight * (16.0f / 9.0f)), m_kinectDrawHeight));
                     int penIndex = 0;
                     foreach (Body body in this.bodies)
                     {
@@ -652,7 +652,62 @@ namespace Microsoft.Samples.Kinect.SkeletonRecord
             UpdateInfo();
 
             //this.Title = string.Concat("TimerWindow  ", DateTime.Now.ToString("yyyy-MM-dd hh:mm:ss"));
+            SelfController();
         }
+
+        bool isShowMode = false;
+        void SelfController()
+        {
+            //按1进入showmode, 按2恢复
+            if (Keyboard.IsKeyDown(Key.D1))
+            {
+                if (!isShowMode)
+                {
+                    isShowMode = true;
+                    SetShowMode();
+                }
+            }
+            if (Keyboard.IsKeyDown(Key.D2))
+            {
+                if (isShowMode)
+                {
+                    isShowMode = false;
+                    SetDebugMode();
+                }
+            }
+
+        }
+
+        void SetShowMode()
+        {
+            //---------------------------------------------------------
+            // 去掉边框放置在左上角   
+            this.Left = -10.0;
+            this.Top = 0.0;
+            this.Width = this.m_showWidth+20;
+            this.Height = this.m_showHeight;
+
+            this.WindowState = System.Windows.WindowState.Normal;
+            this.WindowStyle = System.Windows.WindowStyle.None;
+            this.ResizeMode = System.Windows.ResizeMode.NoResize;
+            this.Topmost = true;
+        }
+
+        void SetDebugMode()
+        {
+            //---------------------------------------------------------
+            // 去掉边框放置在左上角   
+            this.Left = 0.0;
+            this.Top = 0.0;
+            this.Width = this.m_showWidth+20;
+            this.Height = this.m_showHeight;
+
+            this.WindowState = System.Windows.WindowState.Normal;
+            this.WindowStyle = System.Windows.WindowStyle.SingleBorderWindow;
+            this.ResizeMode = System.Windows.ResizeMode.CanResize;
+            this.Topmost = false;
+        }
+
 
         private void UpdateInfo()
         {
@@ -663,19 +718,19 @@ namespace Microsoft.Samples.Kinect.SkeletonRecord
             }
         }
 
-        public int m_kinectDrawWidth = 118;
-        public int m_kinectDrawHeight = 136;
+        public int m_kinectDrawWidth = 295;
+        public int m_kinectDrawHeight = 342;
 
-        public int m_showHeight = 768;
-        public int m_showWidth = 432;
+        public int m_showHeight = 1920;
+        public int m_showWidth = 1080;
 
-        int iconSize = (int)(230.0f * (1.0f / 1080 * 432));
+        int iconSize = (int)(230.0f * (1.0f / 1080 * 1080));
 
-        int infoWidth = (int)(1080.0f * (1.0f / 1080 * 432));
-        int infoHeight = (int)(552.0f * (1.0f / 1080 * 432));
+        int infoWidth = (int)(1080.0f * (1.0f / 1080 * 1080));
+        int infoHeight = (int)(552.0f * (1.0f / 1920 * 1920));
 
-        int titleWidth = (int)(962.0f * (1.0f / 1080 * 432));
-        int titleHeight = (int)(122.0f * (1.0f / 1080 * 432));
+        int titleWidth = (int)(962.0f * (1.0f / 1080 * 1080));
+        int titleHeight = (int)(122.0f * (1.0f / 1920 * 1920));
 
         int m_raduis = 35;
 
@@ -693,7 +748,8 @@ namespace Microsoft.Samples.Kinect.SkeletonRecord
 
         void DrawShow(DrawingContext dc, int flag)
         {
-            dc.DrawRectangle(Brushes.Black, null, new Rect(-100.0, -100.0, 1, 1));
+            //定位左上角
+            dc.DrawRectangle(Brushes.Black, null, new Rect(-250.0, -250.0, 1, 1));
             // Draw a transparent background to set the render size
             SolidColorBrush bgBrush= new SolidColorBrush(Color.FromArgb(255, 0, 0, 0));
             dc.DrawRectangle(bgBrush, null, new Rect(0.0, 0.0, m_showWidth, m_showHeight));
