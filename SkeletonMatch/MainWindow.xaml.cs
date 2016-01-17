@@ -65,12 +65,12 @@ namespace Microsoft.Samples.Kinect.SkeletonRecord
         /// <summary>
         /// Brush used for drawing joints that are currently tracked
         /// </summary>
-        private readonly Brush trackedJointBrush = new SolidColorBrush(Color.FromArgb(255, 68, 192, 68));
+        private readonly Brush trackedJointBrush = new SolidColorBrush(Color.FromArgb(255, 255, 255, 255));
 
         /// <summary>
         /// Brush used for drawing joints that are currently inferred
         /// </summary>        
-        private readonly Brush inferredJointBrush = Brushes.Yellow;
+        private readonly Brush inferredJointBrush = new SolidColorBrush(Color.FromArgb(255, 150, 150, 150));
 
         /// <summary>
         /// Pen used for drawing bones that are currently inferred
@@ -585,6 +585,7 @@ namespace Microsoft.Samples.Kinect.SkeletonRecord
             }
         }
 
+        private float colorFrameOffset = -75.0f;
 
         private int flag = -1;
         /// <summary>
@@ -620,17 +621,26 @@ namespace Microsoft.Samples.Kinect.SkeletonRecord
                     // Draw a transparent background to set the render size
                     dc.DrawRectangle(Brushes.Black, null, new Rect(0.0, 0.0, 160/*this.displayWidth*/, 240/*this.displayHeight*/));
 
-                    dc.DrawImage(colorBitmap, new Rect(-75, 0, (int)(m_kinectDrawHeight * (16.0f / 9.0f)), m_kinectDrawHeight));
+                    dc.DrawImage(colorBitmap, new Rect(colorFrameOffset, 0, (int)(m_kinectDrawHeight * (16.0f / 9.0f)), m_kinectDrawHeight));
                     int penIndex = 0;
                     foreach (Body body in this.bodies)
                     {
                         Pen drawPen = this.bodyColors[penIndex++];
+                        SolidColorBrush bodyBrush= new SolidColorBrush(Color.FromArgb(255, 104, 25, 15));
+                        drawPen = new Pen(bodyBrush, 6);
 
                         if (body.IsTracked)
                         {
                             //this.DrawClippedEdges(body, dc);
 
                             IReadOnlyDictionary<JointType, Joint> joints = body.Joints;
+                            //去除不在范围内的人
+                            Point basePoint = new Point(joints[JointType.SpineBase].Position.X, joints[JointType.SpineBase].Position.Z);
+                            double dis_pow2 = Math.Pow((basePoint.X - detectCenter.X), 2.0f) + Math.Pow((basePoint.Y - detectCenter.Y), 2.0f);
+                            if (dis_pow2 > detectRadius * detectRadius)
+                            {
+                                continue;
+                            }
 
                             // convert the joint points to depth (display) space
                             Dictionary<JointType, Point> jointPoints = new Dictionary<JointType, Point>();
@@ -647,7 +657,7 @@ namespace Microsoft.Samples.Kinect.SkeletonRecord
 
                                 DepthSpacePoint depthSpacePoint = this.coordinateMapper.MapCameraPointToDepthSpace(position);
                                 //jointPoints[jointType] = new Point(depthSpacePoint.X, depthSpacePoint.Y);
-                                jointPoints[jointType] = new Point(depthSpacePoint.X/this.displayWidth * m_kinectDrawWidth, depthSpacePoint.Y / this.displayHeight * m_kinectDrawHeight);
+                                jointPoints[jointType] = new Point(colorFrameOffset/2.7f + depthSpacePoint.X / this.displayHeight * m_kinectDrawHeight, depthSpacePoint.Y / this.displayHeight * m_kinectDrawHeight);
                             }
 
                             //记录骨骼
