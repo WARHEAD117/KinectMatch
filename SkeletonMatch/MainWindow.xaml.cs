@@ -177,6 +177,99 @@ namespace Microsoft.Samples.Kinect.SkeletonRecord
         /// </summary>
         private WriteableBitmap colorBitmap = null;
 
+
+        /// <summary>
+        /// Gets or sets the current status text to display
+        /// </summary>
+        public string StatusText
+        {
+            get
+            {
+                return this.statusText;
+            }
+
+            set
+            {
+                if (this.statusText != value)
+                {
+                    this.statusText = value;
+
+                    // notify any bound elements that the text has changed
+                    if (this.PropertyChanged != null)
+                    {
+                        this.PropertyChanged(this, new PropertyChangedEventArgs("StatusText"));
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// INotifyPropertyChangedPropertyChanged event to allow window controls to bind to changeable data
+        /// </summary>
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        //==========================================================================================================================
+        /// <summary>
+        /// Gets the bitmap to display
+        /// </summary>
+        public ImageSource ImageSource
+        {
+            get
+            {
+                return this.imageSource;
+            }
+        }
+
+        public ImageSource ShowPic
+        {
+            get
+            {
+                return this.picShower;
+            }
+        }
+        //========================================================================================================
+        bool isShowMode = false;
+
+        public int m_kinectDrawWidth = 118;
+        public int m_kinectDrawHeight = 136;
+
+        public int m_showHeight = 768;
+        public int m_showWidth = 432;
+
+        int iconSize = (int)(230.0f * (1.0f / 1080 * 432));
+
+        int infoWidth = (int)(1080.0f * (1.0f / 1080 * 432));
+        int infoHeight = (int)(552.0f * (1.0f / 1080 * 432));
+
+        int titleWidth = (int)(962.0f * (1.0f / 1080 * 432));
+        int titleHeight = (int)(122.0f * (1.0f / 1080 * 432));
+
+        bool m_hasChecked = false;
+
+        int m_checkDelay = 23330;
+        int m_maxDelay = 5000;
+        int m_drawFlag = -1;
+
+        float m_speed = 1000;
+
+        int m_lastCheckedPic = -1;
+
+        bool hasInitImage = false;
+
+        float previewOffset = 17;
+
+        Point detectCenter = new Point(0, 1.5f);
+        float detectRadius = 0.5f;
+
+        List<BitmapImage> InfoImageList;
+        List<BitmapImage> ImageList;
+        List<BitmapImage> MoveImageList;
+
+        private float colorFrameOffset = -75.0f;
+
+        private int flag = -1;
+
+
         /// <summary>
         /// Initializes a new instance of the MainWindow class.
         /// </summary>
@@ -355,8 +448,116 @@ namespace Microsoft.Samples.Kinect.SkeletonRecord
             LoadConfig();
         }
 
-        Point detectCenter = new Point(0, 1.5f);
-        float detectRadius = 0.5f;
+
+
+        /// <summary>
+        /// Execute start up tasks
+        /// </summary>
+        /// <param name="sender">object sending the event</param>
+        /// <param name="e">event arguments</param>
+        private void MainWindow_Loaded(object sender, RoutedEventArgs e)
+        {
+            if (this.bodyFrameReader != null)
+            {
+                this.bodyFrameReader.FrameArrived += this.Reader_FrameArrived;
+            }
+        }
+
+        /// <summary>
+        /// Execute shutdown tasks
+        /// </summary>
+        /// <param name="sender">object sending the event</param>
+        /// <param name="e">event arguments</param>
+        private void MainWindow_Closing(object sender, CancelEventArgs e)
+        {
+            if (this.bodyFrameReader != null)
+            {
+                // BodyFrameReader is IDisposable
+                this.bodyFrameReader.Dispose();
+                this.bodyFrameReader = null;
+            }
+
+            if (this.kinectSensor != null)
+            {
+                this.kinectSensor.Close();
+                this.kinectSensor = null;
+            }
+        }
+
+        private bool LoadPic()
+        {
+            if (ImageList == null)
+            {
+                ImageList = new List<BitmapImage>();
+            }
+
+            String imgFolder = System.IO.Path.GetDirectoryName(Application.ResourceAssembly.Location) + @"/Tex/";
+            if (!Directory.Exists(imgFolder))
+                return false;
+
+            DirectoryInfo ImgFolderInfo = new DirectoryInfo(imgFolder);
+
+
+            List<String> fileList = new List<String>();
+            foreach (FileInfo nextFile in ImgFolderInfo.GetFiles())
+            {
+                fileList.Add(nextFile.FullName);
+            }
+
+            int imgCount = fileList.Count;
+            ImageList.Clear();
+
+            for (int i = 0; i < imgCount; i++)
+            {
+                String imgPath = fileList[i];
+                bool isExist = File.Exists(imgPath.ToString());
+                if (isExist)
+                {
+                    BitmapImage newImage = new BitmapImage(new Uri(imgPath, UriKind.Absolute));
+                    ImageList.Add(newImage);
+                }
+
+            }
+            return true;
+        }
+
+
+
+
+        private bool LoadPic(string folderName, out List<BitmapImage> texList)
+        {
+            texList = new List<BitmapImage>();
+
+            String imgFolder = System.IO.Path.GetDirectoryName(Application.ResourceAssembly.Location) + folderName;
+            if (!Directory.Exists(imgFolder))
+                return false;
+
+            DirectoryInfo ImgFolderInfo = new DirectoryInfo(imgFolder);
+
+
+            List<String> fileList = new List<String>();
+            foreach (FileInfo nextFile in ImgFolderInfo.GetFiles())
+            {
+                fileList.Add(nextFile.FullName);
+            }
+
+            int imgCount = fileList.Count;
+            texList.Clear();
+
+            for (int i = 0; i < imgCount; i++)
+            {
+                String imgPath = fileList[i];
+                bool isExist = File.Exists(imgPath.ToString());
+                if (isExist)
+                {
+                    BitmapImage newImage = new BitmapImage(new Uri(imgPath, UriKind.Absolute));
+                    texList.Add(newImage);
+                }
+
+            }
+            return true;
+        }
+
 
         void LoadConfig()
         {
@@ -425,169 +626,7 @@ namespace Microsoft.Samples.Kinect.SkeletonRecord
             return num;
         }
 
-        List<BitmapImage> InfoImageList;
-        List<BitmapImage> ImageList;
-        List<BitmapImage> MoveImageList;
-        private bool LoadPic()
-        {
-            if (ImageList == null)
-            {
-                ImageList = new List<BitmapImage>();
-            }
-            
-            String imgFolder = System.IO.Path.GetDirectoryName(Application.ResourceAssembly.Location) + @"/Tex/";
-            if (!Directory.Exists(imgFolder))
-                return false;
 
-            DirectoryInfo ImgFolderInfo = new DirectoryInfo(imgFolder);
-
-
-            List<String> fileList = new List<String>();
-            foreach (FileInfo nextFile in ImgFolderInfo.GetFiles())
-            {
-                fileList.Add(nextFile.FullName);
-            }
-
-            int imgCount = fileList.Count;
-            ImageList.Clear();
-
-            for (int i = 0; i < imgCount; i++)
-            {
-                String imgPath = fileList[i];
-                bool isExist = File.Exists(imgPath.ToString());
-                if (isExist)
-                {
-                    BitmapImage newImage = new BitmapImage(new Uri(imgPath, UriKind.Absolute));
-                    ImageList.Add(newImage);
-                }
-
-            }
-            return true;
-        }
-
-        
-
-       
-        private bool LoadPic(string folderName, out List<BitmapImage> texList)
-        {
-            texList = new List<BitmapImage>();
-
-            String imgFolder = System.IO.Path.GetDirectoryName(Application.ResourceAssembly.Location) + folderName;
-            if (!Directory.Exists(imgFolder))
-                return false;
-
-            DirectoryInfo ImgFolderInfo = new DirectoryInfo(imgFolder);
-
-
-            List<String> fileList = new List<String>();
-            foreach (FileInfo nextFile in ImgFolderInfo.GetFiles())
-            {
-                fileList.Add(nextFile.FullName);
-            }
-
-            int imgCount = fileList.Count;
-            texList.Clear();
-
-            for (int i = 0; i < imgCount; i++)
-            {
-                String imgPath = fileList[i];
-                bool isExist = File.Exists(imgPath.ToString());
-                if (isExist)
-                {
-                    BitmapImage newImage = new BitmapImage(new Uri(imgPath, UriKind.Absolute));
-                    texList.Add(newImage);
-                }
-
-            }
-            return true;
-        }
-
-        /// <summary>
-        /// INotifyPropertyChangedPropertyChanged event to allow window controls to bind to changeable data
-        /// </summary>
-        public event PropertyChangedEventHandler PropertyChanged;
-
-        /// <summary>
-        /// Gets the bitmap to display
-        /// </summary>
-        public ImageSource ImageSource
-        {
-            get
-            {
-                return this.imageSource;
-            }
-        }
-
-        public ImageSource ShowPic
-        {
-            get
-            {
-                return this.picShower;
-            }
-        }
-
-        /// <summary>
-        /// Gets or sets the current status text to display
-        /// </summary>
-        public string StatusText
-        {
-            get
-            {
-                return this.statusText;
-            }
-
-            set
-            {
-                if (this.statusText != value)
-                {
-                    this.statusText = value;
-
-                    // notify any bound elements that the text has changed
-                    if (this.PropertyChanged != null)
-                    {
-                        this.PropertyChanged(this, new PropertyChangedEventArgs("StatusText"));
-                    }
-                }
-            }
-        }
-
-        /// <summary>
-        /// Execute start up tasks
-        /// </summary>
-        /// <param name="sender">object sending the event</param>
-        /// <param name="e">event arguments</param>
-        private void MainWindow_Loaded(object sender, RoutedEventArgs e)
-        {
-            if (this.bodyFrameReader != null)
-            {
-                this.bodyFrameReader.FrameArrived += this.Reader_FrameArrived;
-            }
-        }
-
-        /// <summary>
-        /// Execute shutdown tasks
-        /// </summary>
-        /// <param name="sender">object sending the event</param>
-        /// <param name="e">event arguments</param>
-        private void MainWindow_Closing(object sender, CancelEventArgs e)
-        {
-            if (this.bodyFrameReader != null)
-            {
-                // BodyFrameReader is IDisposable
-                this.bodyFrameReader.Dispose();
-                this.bodyFrameReader = null;
-            }
-
-            if (this.kinectSensor != null)
-            {
-                this.kinectSensor.Close();
-                this.kinectSensor = null;
-            }
-        }
-
-        private float colorFrameOffset = -75.0f;
-
-        private int flag = -1;
         /// <summary>
         /// Handles the body frame data arriving from the sensor
         /// </summary>
@@ -725,6 +764,18 @@ namespace Microsoft.Samples.Kinect.SkeletonRecord
             }
         }
 
+        /// <summary>
+        /// Handles the event which the sensor becomes unavailable (E.g. paused, closed, unplugged).
+        /// </summary>
+        /// <param name="sender">object sending the event</param>
+        /// <param name="e">event arguments</param>
+        private void Sensor_IsAvailableChanged(object sender, IsAvailableChangedEventArgs e)
+        {
+            // on failure, set the status text
+            this.StatusText = this.kinectSensor.IsAvailable ? Properties.Resources.RunningStatusText
+                                                            : Properties.Resources.SensorNotAvailableStatusText;
+        }
+
 
         void timer_Tick(object sender, EventArgs e)
         {
@@ -740,7 +791,15 @@ namespace Microsoft.Samples.Kinect.SkeletonRecord
             SelfController();
         }
 
-        bool isShowMode = false;
+        private void UpdateInfo()
+        {
+            using (DrawingContext dc = this.drawingPicGroup.Open())
+            {
+                DrawShow(dc, flag);
+
+            }
+        }
+
         void SelfController()
         {
             //按1进入showmode, 按2恢复
@@ -794,42 +853,6 @@ namespace Microsoft.Samples.Kinect.SkeletonRecord
         }
 
 
-        private void UpdateInfo()
-        {
-            using (DrawingContext dc = this.drawingPicGroup.Open())
-            {
-                DrawShow(dc, flag);
-
-            }
-        }
-
-        public int m_kinectDrawWidth = 118;
-        public int m_kinectDrawHeight = 136;
-
-        public int m_showHeight = 768;
-        public int m_showWidth = 432;
-
-        int iconSize = (int)(230.0f * (1.0f / 1080 * 432));
-
-        int infoWidth = (int)(1080.0f * (1.0f / 1080 * 432));
-        int infoHeight = (int)(552.0f * (1.0f / 1080 * 432));
-
-        int titleWidth = (int)(962.0f * (1.0f / 1080 * 432));
-        int titleHeight = (int)(122.0f * (1.0f / 1080 * 432));
-
-        int m_raduis = 35;
-
-        bool m_hasChecked = false;
-
-        int m_checkDelay = 23330;
-        int m_maxDelay = 5000;
-        int m_drawFlag = -1;
-
-        float m_speed = 1000;
-
-        int m_lastCheckedPic = -1;
-
-        bool hasInitImage = false;
 
         void DrawShow(DrawingContext dc, int flag)
         {
@@ -900,8 +923,6 @@ namespace Microsoft.Samples.Kinect.SkeletonRecord
                 dc.DrawImage(InfoImageList[m_drawFlag], new Rect(0, m_showHeight - infoHeight, infoWidth, infoHeight));
             }
 
-            int offset = 17;
-
             SolidColorBrush previewBrush = new SolidColorBrush(Color.FromArgb(178, 0, 0, 0));
             for (int i = 0; i < m_PreviewList.Count; i++)
             {
@@ -918,10 +939,10 @@ namespace Microsoft.Samples.Kinect.SkeletonRecord
                 else
                 {
                     x = m_PreviewList[i].PosX;
-                    if (m_PreviewList[i].PosY < m_showHeight - infoHeight + offset)
+                    if (m_PreviewList[i].PosY < m_showHeight - infoHeight + previewOffset)
                     {
                         float speed = m_speed;
-                        float changePos = (m_showHeight - infoHeight + offset) * 0.7f;
+                        float changePos = (m_showHeight - infoHeight + previewOffset) * 0.7f;
                         if (m_PreviewList[i].PosY > changePos)
                         {
                             float a = 1.0f * (m_showHeight - m_PreviewList[i].PosY) / (m_showHeight - changePos);
@@ -931,9 +952,9 @@ namespace Microsoft.Samples.Kinect.SkeletonRecord
                         
                         
                     }
-                    if (m_PreviewList[i].PosY > m_showHeight - infoHeight + offset)
+                    if (m_PreviewList[i].PosY > m_showHeight - infoHeight + previewOffset)
                     {
-                        m_PreviewList[i].PosY = m_showHeight - infoHeight + offset;
+                        m_PreviewList[i].PosY = m_showHeight - infoHeight + previewOffset;
                     }
                     y = m_PreviewList[i].PosY;
                 }
@@ -1488,18 +1509,6 @@ namespace Microsoft.Samples.Kinect.SkeletonRecord
                     null,
                     new Rect(this.displayWidth - ClipBoundsThickness, 0, ClipBoundsThickness, m_kinectDrawHeight/*this.displayHeight*/));
             }
-        }
-
-        /// <summary>
-        /// Handles the event which the sensor becomes unavailable (E.g. paused, closed, unplugged).
-        /// </summary>
-        /// <param name="sender">object sending the event</param>
-        /// <param name="e">event arguments</param>
-        private void Sensor_IsAvailableChanged(object sender, IsAvailableChangedEventArgs e)
-        {
-            // on failure, set the status text
-            this.StatusText = this.kinectSensor.IsAvailable ? Properties.Resources.RunningStatusText
-                                                            : Properties.Resources.SensorNotAvailableStatusText;
         }
 
         
