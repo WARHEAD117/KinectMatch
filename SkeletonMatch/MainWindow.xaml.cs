@@ -988,40 +988,7 @@ namespace Microsoft.Samples.Kinect.SkeletonRecord
             double deltaLHandToShoulder_X = jointPoints[JointType.HandLeft].X - jointPoints[JointType.ShoulderLeft].X;
             double deltaLHandToShoulder_Y = jointPoints[JointType.HandLeft].Y - jointPoints[JointType.ShoulderLeft].Y;
             double degreeLHandToShoulder = Math.Abs(Math.Atan(deltaLHandToShoulder_Y / deltaLHandToShoulder_X));
-
-            if (degreeHeadToHip >= Math.PI * 0.166 && degreeHeadToHip <= Math.PI * 0.33)
-            {
-                if (deltaHeadToHip_X < 0)
-                {
-                    if(degreeLHandToShoulder >= Math.PI * 0.25 && degreeLHandToShoulder <= Math.PI * 0.33)
-                    {
-                        if (deltaLHandToShoulder_X < 0)
-                        {
-                            if(jointPoints[JointType.HandRight].X < jointPoints[JointType.ElbowRight].X
-                            && jointPoints[JointType.HandRight].Y > jointPoints[JointType.ElbowRight].Y)
-                            {
-                                return 0;
-                            }
-                        }
-                        
-                        
-                    }
-
-                    if (degreeLHandToShoulder <= Math.PI * 0.5 && degreeLHandToShoulder >= Math.PI * 0.33)
-                    {
-                        if (jointPoints[JointType.HandRight].X < jointPoints[JointType.ElbowRight].X
-                            && jointPoints[JointType.HandRight].Y < jointPoints[JointType.ElbowRight].Y)
-                        {
-                            return 1;
-                        }
-
-                    }
-                }
-            }
-
-            //
             
-
             //左肘到左肩的连线
             double deltaLElbowToShoulder_X = jointPoints[JointType.ElbowLeft].X - jointPoints[JointType.ShoulderLeft].X;
             double deltaLElbowToShoulder_Y = jointPoints[JointType.ElbowLeft].Y - jointPoints[JointType.ShoulderLeft].Y;
@@ -1041,7 +1008,47 @@ namespace Microsoft.Samples.Kinect.SkeletonRecord
             double deltaRHandToElbow_X = jointPoints[JointType.HandRight].X - jointPoints[JointType.ElbowRight].X;
             double deltaRHandToElbow_Y = jointPoints[JointType.HandRight].Y - jointPoints[JointType.ElbowRight].Y;
             double degreeRHandToElbow = Math.Abs(Math.Atan(deltaRHandToElbow_Y / deltaRHandToElbow_X));
+            
+            //头到脖子的连线的角度
+            double deltaHeadToShoulderCenter_X = jointPoints[JointType.Head].X - jointPoints[JointType.Neck].X;
+            double deltaHeadToShoulderCenter_Y = jointPoints[JointType.Head].Y - jointPoints[JointType.Neck].Y;
+            double degreeHeadToShoulderCenter = Math.Abs(Math.Atan(deltaHeadToShoulderCenter_Y / deltaHeadToShoulderCenter_X));
 
+            //1,2号图片
+            if (degreeHeadToHip >= Math.PI * 0.166 && degreeHeadToHip <= Math.PI * 0.4)
+            {
+                if (deltaHeadToHip_X < 0)
+                {
+                    if(degreeLHandToShoulder >= Math.PI * 0.15 && degreeLHandToShoulder <= Math.PI * 0.33)
+                    {
+                        if (deltaLHandToShoulder_X < 0 && deltaLHandToShoulder_Y > 0)
+                        {
+                            if (degreeRElbowToShoulder <= Math.PI * 0.25)
+                            {
+                                if(jointPoints[JointType.HandRight].X < jointPoints[JointType.ElbowRight].X
+                                && jointPoints[JointType.HandRight].Y > jointPoints[JointType.ShoulderRight].Y)
+                                {
+                                   return 0;
+                                }
+                            }
+                        }
+                        
+                        
+                    }
+
+                    if (degreeLHandToShoulder <= Math.PI * 0.5 && degreeLHandToShoulder >= Math.PI * 0.33)
+                    {
+                        if (jointPoints[JointType.HandRight].X < jointPoints[JointType.ElbowRight].X
+                            && jointPoints[JointType.HandRight].Y < jointPoints[JointType.ElbowRight].Y)
+                        {
+                            return 1;
+                        }
+
+                    }
+                }
+            }
+
+            //3号图
             if (degreeHeadToHip >= Math.PI * 0.38 && degreeHeadToHip <= Math.PI * 0.45)
             {
                 if (deltaHeadToHip_X > 0)
@@ -1076,7 +1083,7 @@ namespace Microsoft.Samples.Kinect.SkeletonRecord
                 }
             }
 
-            //有点难
+            //4号图
             if (degreeHeadToHip >= Math.PI * 0.2 && degreeHeadToHip <= Math.PI * 0.45)
             {
                 if (deltaHeadToHip_X > 0)
@@ -1093,9 +1100,9 @@ namespace Microsoft.Samples.Kinect.SkeletonRecord
                         }
                     }
                     bool isTrueRight = false;
-                    if (degreeRElbowToShoulder < Math.PI * 0.4)
+                    if (degreeRElbowToShoulder < Math.PI * 0.6)
                     {
-                        if (deltaRElbowToShoulder_X < 0 && deltaRElbowToShoulder_Y > 0)
+                        if (/*deltaRElbowToShoulder_X < 0 &&*/ deltaRElbowToShoulder_Y > 0)
                         {
                             if (degreeRHandToElbow > Math.PI * 0.35 && deltaRHandToElbow_Y < 0)
                             {
@@ -1112,7 +1119,7 @@ namespace Microsoft.Samples.Kinect.SkeletonRecord
                 
             }
 
-            //有点难
+            //5号图
             if (degreeHeadToHip >= Math.PI * 0.35 && degreeHeadToHip <= Math.PI * 0.48)
             {
                 if (deltaHeadToHip_X < 0)
@@ -1147,15 +1154,10 @@ namespace Microsoft.Samples.Kinect.SkeletonRecord
                 }
             }
 
-            
-            //头到脖子的连线的角度
-            double deltaHeadToShoulderCenter_X = jointPoints[JointType.Head].X - jointPoints[JointType.Neck].X;
-            double deltaHeadToShoulderCenter_Y = jointPoints[JointType.Head].Y - jointPoints[JointType.Neck].Y;
-            double degreeHeadToShoulderCenter = Math.Abs(Math.Atan(deltaHeadToShoulderCenter_Y / deltaHeadToShoulderCenter_X));
-
+            //7号图
             if (deltaHeadToShoulderCenter_X > 0 && degreeHeadToShoulderCenter < 0.47 * Math.PI)
             {
-                if (degreeLElbowToShoulder >= 0.35 * Math.PI && degreeRElbowToShoulder <= 0.25 * Math.PI)
+                if (degreeLElbowToShoulder >= 0.25 * Math.PI && degreeRElbowToShoulder <= 0.25 * Math.PI)
                 {
                     if (deltaLHandToElbow_Y < 0 && deltaRHandToElbow_Y < 0)
                     {
@@ -1167,8 +1169,8 @@ namespace Microsoft.Samples.Kinect.SkeletonRecord
                 }
             }
 
-            
 
+            //8号图
             if (degreeHeadToHip < 0.46 * Math.PI)
             {
                 if(deltaLElbowToShoulder_Y > 0 && deltaRElbowToShoulder_Y > 0)
@@ -1189,7 +1191,7 @@ namespace Microsoft.Samples.Kinect.SkeletonRecord
                 }
             }
 
-
+            //9号图
             if (degreeHeadToHip < 0.46 * Math.PI)
             {
                 if (deltaLElbowToShoulder_Y > 0 && deltaRElbowToShoulder_Y > 0)
@@ -1211,7 +1213,7 @@ namespace Microsoft.Samples.Kinect.SkeletonRecord
                 
             }
 
-
+            //10号图
             if (degreeHeadToHip > 0.4 * Math.PI)
             {
                 if (deltaLElbowToShoulder_Y > 0 && deltaRElbowToShoulder_Y > 0)
@@ -1235,6 +1237,7 @@ namespace Microsoft.Samples.Kinect.SkeletonRecord
                 }
             }
 
+            //11号图
             if (degreeLElbowToShoulder >= 0.35 * Math.PI && degreeRElbowToShoulder >= 0.35 * Math.PI)
             {
                 if (deltaLElbowToShoulder_Y > 0 && deltaRElbowToShoulder_Y > 0)
@@ -1250,6 +1253,7 @@ namespace Microsoft.Samples.Kinect.SkeletonRecord
                 
             }
 
+            //12号图
             if (degreeHeadToHip < 0.46 * Math.PI && deltaHeadToHip_X < 0)
             {
                 if (deltaLElbowToShoulder_Y > 0 && deltaRElbowToShoulder_Y > 0)
@@ -1273,6 +1277,7 @@ namespace Microsoft.Samples.Kinect.SkeletonRecord
                 }
             }
 
+            //13号图
             if (degreeLElbowToShoulder >= 0.35 * Math.PI && degreeRElbowToShoulder >= 0.2 * Math.PI)
             {
                 if (deltaLElbowToShoulder_Y > 0 && deltaRElbowToShoulder_Y > 0)
@@ -1293,11 +1298,12 @@ namespace Microsoft.Samples.Kinect.SkeletonRecord
                 }
             }
 
-            if (deltaHeadToHip_X < 0)
+            //14号图
+            if (deltaHeadToHip_X < 0 && degreeHeadToHip < 0.47 *Math.PI)
             {
                 if (deltaLElbowToShoulder_Y > 0 && deltaRElbowToShoulder_Y < 0)
                 {
-                    if (degreeLElbowToShoulder >= 0.35 * Math.PI && degreeRElbowToShoulder <= 0.35 * Math.PI)
+                    if (degreeLElbowToShoulder >= 0.35 * Math.PI && degreeRElbowToShoulder >= 0.25 * Math.PI && degreeRElbowToShoulder <= 0.4 * Math.PI)
                     {
                         if (deltaRHandToElbow_X < 0 && deltaRHandToElbow_Y < 0)
                         {
