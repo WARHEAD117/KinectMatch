@@ -19,6 +19,8 @@ namespace Microsoft.Samples.Kinect.SkeletonRecord
     using System.Windows.Threading;
     using Microsoft.Win32;
     using System.Windows.Input;
+    using System.Text.RegularExpressions;
+    using System.Text;
 
     /// <summary>
     /// Interaction logic for MainWindow
@@ -349,7 +351,80 @@ namespace Microsoft.Samples.Kinect.SkeletonRecord
             bool result = LoadPic("/Tex/", out ImageList);
             result = LoadPic("/InfoTex/", out InfoImageList);
             result = LoadPic("/MoveTex/", out MoveImageList);
+
+            LoadConfig();
         }
+
+        Point detectCenter = new Point(0, 1.5f);
+        float detectRadius = 0.5f;
+
+        void LoadConfig()
+        {
+            String configPath = System.IO.Path.GetDirectoryName(Application.ResourceAssembly.Location) + @"/config.txt";
+            if (File.Exists(configPath))
+            {
+                StreamReader sr = new StreamReader(configPath, Encoding.Default);
+
+                string detectCenterX_S = null;
+                string detectCenterY_S = null;
+                string detectRadius_S = null;
+
+                int tempNum = -1;
+
+                if (sr.Peek() > 0)
+                {
+                    detectCenterX_S = sr.ReadLine();
+                    if (detectCenterX_S != "" || detectCenterX_S != null)
+                    {
+                        tempNum = GetNum(detectCenterX_S, "DetectCenterX");
+                        if (tempNum != -1)
+                        {
+                            detectCenter.X = tempNum / 100.0f;
+                        }
+                    }
+                }
+                if (sr.Peek() > 0)
+                {
+                    detectCenterY_S = sr.ReadLine();
+                    if (detectCenterY_S != "" || detectCenterY_S != null)
+                    {
+                        tempNum = GetNum(detectCenterY_S, "DetectCenterY");
+                        if (tempNum != -1)
+                        {
+                            detectCenter.Y = tempNum / 100.0f;
+                        }
+                    }
+                }
+                if (sr.Peek() > 0)
+                {
+                    detectRadius_S = sr.ReadLine();
+                    if (detectRadius_S != "" || detectRadius_S != null)
+                    {
+                        tempNum = GetNum(detectRadius_S, "DetectRadius");
+                        if (tempNum != -1)
+                        {
+                            detectRadius = tempNum / 100.0f;
+                        }
+                    }
+                }
+                sr.Close();
+
+            }
+        }
+
+        private int GetNum(string str, string markStr)
+        {
+            int num = -1;
+
+            string pattern = markStr + @":[0-9]*";
+            string result = Regex.Match(str, pattern).Value;
+            string patternGetNum = @"[0-9]\d*";
+            string num_result = Regex.Match(result, patternGetNum).Value;
+
+            num = System.Int32.Parse(num_result);
+            return num;
+        }
+
         List<BitmapImage> InfoImageList;
         List<BitmapImage> ImageList;
         List<BitmapImage> MoveImageList;
