@@ -269,6 +269,8 @@ namespace Microsoft.Samples.Kinect.SkeletonRecord
 
         private int flag = -1;
 
+        private int stackCount = 0;
+        private int[] moveStack = null;
 
         /// <summary>
         /// Initializes a new instance of the MainWindow class.
@@ -446,6 +448,9 @@ namespace Microsoft.Samples.Kinect.SkeletonRecord
             result = LoadPic("/MoveTex/", out MoveImageList);
 
             LoadConfig();
+
+            stackCount = 20;
+            moveStack = new int[stackCount];
         }
 
 
@@ -793,9 +798,28 @@ namespace Microsoft.Samples.Kinect.SkeletonRecord
 
         private void UpdateInfo()
         {
+
+            for (int i = 0; i < stackCount - 1; i++)
+            {
+                moveStack[i] = moveStack[i + 1];
+            }
+            moveStack[stackCount - 1] = flag;
+
+            int count = 0;
+            for (int i = 0; i < stackCount - 1; i++)
+            {
+                if (moveStack[i] == flag)
+                    count++;
+            }
+            int showFlag = -1;
+            if (count > stackCount * 0.7f)
+            {
+                showFlag = flag;
+            }
+
             using (DrawingContext dc = this.drawingPicGroup.Open())
             {
-                DrawShow(dc, flag);
+                DrawShow(dc, showFlag);
 
             }
         }
