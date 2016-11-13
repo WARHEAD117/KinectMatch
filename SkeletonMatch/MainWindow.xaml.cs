@@ -6,6 +6,7 @@
 
 namespace Microsoft.Samples.Kinect.SkeletonRecord
 {
+
     using System;
     using System.Collections.Generic;
     using System.ComponentModel;
@@ -21,6 +22,9 @@ namespace Microsoft.Samples.Kinect.SkeletonRecord
     using System.Windows.Input;
     using System.Text.RegularExpressions;
     using System.Text;
+    using System.Drawing.Imaging;
+    //using 
+    //using System.Drawing;
 
     /// <summary>
     /// Interaction logic for MainWindow
@@ -137,18 +141,6 @@ namespace Microsoft.Samples.Kinect.SkeletonRecord
         /// </summary>
         private string statusText = null;
 
-        private bool m_bIsRecording = false;
-
-        DispatcherTimer timer = new DispatcherTimer();
-
-        private int m_deltaTime = 0;
-        private int m_timer = 0;
-        private int m_startTime = 0;
-
-        private int m_unsavedTimer = 0;
-
-        List<Preview> m_PreviewList;
-
         class SkelData
         {
             public Tuple<float, float, float, JointType>[] jointList = new Tuple<float, float, float, JointType>[25];
@@ -228,44 +220,88 @@ namespace Microsoft.Samples.Kinect.SkeletonRecord
             }
         }
         //========================================================================================================
-        bool isShowMode = false;
+        bool isShowMode = true;
 
-        public int m_kinectDrawWidth = 118;
-        public int m_kinectDrawHeight = 136;
+
+        DispatcherTimer timer = new DispatcherTimer();
+
+        private int m_deltaTime = 0;
+        private int m_timer = 0;
+        private int m_startTime = 0;
+
+        List<Preview> m_PreviewList;
 
         public int m_showHeight = 768;
         public int m_showWidth = 432;
 
-        int iconSize = (int)(230.0f * (1.0f / 1080 * 432));
+        public int m_kinectDrawWidth = 160;
+        public int m_kinectDrawHeight = 1096;
 
-        int infoWidth = (int)(1080.0f * (1.0f / 1080 * 432));
-        int infoHeight = (int)(552.0f * (1.0f / 1080 * 432));
+        private float colorFrameOffsetX = 0;//-420.0f;
+        private float colorFrameOffsetY = 200;//200.0f;
 
-        int titleWidth = (int)(962.0f * (1.0f / 1080 * 432));
-        int titleHeight = (int)(122.0f * (1.0f / 1080 * 432));
+        int iconSize = 180;
+
+        int spaceBetweenAnimX = 0;
+        int spaceBetweenAnimY = 0;
+
+        int animOffsetX = 240;
+        int animOffsetY = 450;
+
+        int infoX = 0;
+        int infoY = 1449;
+        int infoWidth = 1080;
+        int infoHeight = 471;
+
+
+        int startInfoX = 60;
+        int startInfoY = 1047;
+        int startInfoWidth = 960;
+        int startInfoHeight = 96;
+
+        int titleX = 195;
+        int titleY = 125;
+        int titleWidth = 691;
+        int titleHeight = 251;
+
+
+        Preview scrollAnim;
 
         bool m_hasChecked = false;
 
+        bool m_bodyTracked = false;
+
+        bool m_lastBodyTracked = false;
+
+
         int m_checkDelay = 23330;
-        int m_maxDelay = 5000;
+        int m_maxDelay = 9000;
         int m_drawFlag = -1;
 
         float m_speed = 1000;
 
-        int m_lastCheckedPic = -1;
-
         bool hasInitImage = false;
+
+
+        int previewNum = 14;
 
         float previewOffset = 17;
 
         Point detectCenter = new Point(0, 1.5f);
         float detectRadius = 0.5f;
 
-        List<BitmapImage> InfoImageList;
-        List<BitmapImage> ImageList;
-        List<BitmapImage> MoveImageList;
+        List<BitmapImage> InfoTexList;
+        List<System.Drawing.Image> InfoTexImageList;
+        List<BitmapImage> TexList;
+        List<System.Drawing.Image> TexImageList;
+        List<BitmapImage> MoveAnimList;
 
-        private float colorFrameOffset = -75.0f;
+        List<BitmapImage> HintList;
+
+        BitmapImage stoneBG;
+        BitmapImage startInfoTex;
+        BitmapImage titleTex;
+
 
         private int flag = -1;
 
@@ -384,253 +420,103 @@ namespace Microsoft.Samples.Kinect.SkeletonRecord
 
             timer = new DispatcherTimer(DispatcherPriority.Normal);
             timer.Tick += new EventHandler(timer_Tick);
-            timer.Interval = TimeSpan.FromSeconds(0.001);   //设置刷新的间隔时间
+            timer.Interval = TimeSpan.FromSeconds(0.01);   //设置刷新的间隔时间
             timer.Start();
 
-            m_bIsRecording = false;
             m_timer = 0;
             m_startTime = Environment.TickCount;
-            m_unsavedTimer = 0;
 
-            int previewNum = 14;
+
+
+            m_showHeight = 1920;
+            m_showWidth = 1080;
+
+            m_kinectDrawWidth = (int)(16.0f / 9.0f * m_kinectDrawHeight);
+            colorFrameOffsetX = 1080 / 2 - m_kinectDrawWidth / 2.0f;
+
+            m_kinectDrawWidth = (int)(m_kinectDrawWidth * (1.0f / 1080 * m_showWidth));
+            m_kinectDrawHeight = (int)(m_kinectDrawHeight * (1.0f / 1920 * m_showHeight));
+
+            colorFrameOffsetX = (int)(colorFrameOffsetX * (1.0f / 1080 * m_showWidth));
+            colorFrameOffsetY = (int)(colorFrameOffsetY * (1.0f / 1920 * m_showHeight));
+
+            iconSize = (int)(iconSize * (1.0f / 1080 * m_showWidth));
+
+            infoX = (int)(infoX * (1.0f / 1080 * m_showWidth));
+            infoY = (int)(infoY * (1.0f / 1920 * m_showHeight));
+            infoWidth = (int)(infoWidth * (1.0f / 1080 * m_showWidth));
+            infoHeight = (int)(infoHeight * (1.0f / 1920 * m_showHeight));
+
+            startInfoX = (int)(startInfoX * (1.0f / 1080 * m_showWidth));
+            startInfoY = (int)(startInfoY * (1.0f / 1920 * m_showHeight));
+            startInfoWidth = (int)(startInfoWidth * (1.0f / 1080 * m_showWidth));
+            startInfoHeight = (int)(startInfoHeight * (1.0f / 1920 * m_showHeight));
+
+            titleX = (int)(titleX * (1.0f / 1080 * m_showWidth));
+            titleY = (int)(titleY * (1.0f / 1920 * m_showHeight));
+            titleWidth = (int)(titleWidth * (1.0f / 1080 * m_showWidth));
+            titleHeight = (int)(titleHeight * (1.0f / 1920 * m_showHeight));
+
             m_PreviewList = new List<Preview>();
-            for(int i = 0; i < 5; i++)
+
+            animOffsetX = (int)(animOffsetX * (1.0f / 1080 * m_showWidth));
+            animOffsetY = (int)(animOffsetY * (1.0f / 1920 * m_showHeight));
+
+            spaceBetweenAnimX = (int)(spaceBetweenAnimX * (1.0f / 1080 * m_showWidth));
+            spaceBetweenAnimY = (int)(spaceBetweenAnimY * (1.0f / 1920 * m_showHeight));
+
+            int[,] iconList = {{315,498},{576,498},
+                                {180,783},{441,783},{702,783},
+                                {180,1080},{441,1080},{702,1080},
+                                {180,1368},{441,1368},{702,1368},
+                                {180,1674},{441,1674},{702,1674}};
+           
+            int widthCount = 3;
+            int heightCount = 5;
+            for (int i = 0; i < previewNum; i++ )
             {
-                for(int j = 0; j < 3; j++)
-                {
-                    int x = 0;
-                    int y = 0;
-                    if (i == 0 && j == 0)
-                        continue;
+                int x = iconList[i,0];
+                int y = iconList[i,1];
+                x = (int)(x * (1.0f / 1080 * m_showWidth));
+                y = (int)(y * (1.0f / 1920 * m_showHeight));
+                string numInName = "";
+                int numInName_Int = i+1;
+                if (numInName_Int < 10)
+                    numInName = "0" + numInName_Int.ToString();
+                else
+                    numInName = numInName_Int.ToString();
 
-                    x = (int)(65.0f * (1.0f / 1080 * m_showWidth)) + (int)(j * 360.0f * (1.0f / 1080 * m_showWidth));
-                    y = (int)(56.0f * (1.0f / 1920 * m_showHeight)) + (int)(i * 342.0f * (1.0f / 1920 * m_showHeight));
-                    
-                    Preview preIcon = new Preview(x, y);
+                Preview preIcon = new Preview(x, y, "/AnimMove/" + numInName + "/");
 
-                    m_PreviewList.Add(preIcon);
-                }
+                m_PreviewList.Add(preIcon);
             }
+            String bgImgPath = System.IO.Path.GetDirectoryName(Application.ResourceAssembly.Location) + @"/AppTex/" + @"stoneBG.png";
+            stoneBG = new BitmapImage(new Uri(bgImgPath, UriKind.Absolute));
 
-            m_PreviewList[0] = new Preview((int)(65.0f * (1.0f / 1080 * m_showWidth)) + (int)(1 * 360.0f * (1.0f / 1080 * m_showWidth)),
-                (int)(56.0f * (1.0f / 1920 * m_showHeight)) + (int)(0 * 342.0f * (1.0f / 1920 * m_showHeight)), "/AnimMove/01/");
-            m_PreviewList[1] = new Preview((int)(65.0f * (1.0f / 1080 * m_showWidth)) + (int)(2 * 360.0f * (1.0f / 1080 * m_showWidth)),
-                (int)(56.0f * (1.0f / 1920 * m_showHeight)) + (int)(0 * 342.0f * (1.0f / 1920 * m_showHeight)), "/AnimMove/02/");
-            m_PreviewList[2] = new Preview((int)(65.0f * (1.0f / 1080 * m_showWidth)) + (int)(0 * 360.0f * (1.0f / 1080 * m_showWidth)),
-                (int)(56.0f * (1.0f / 1920 * m_showHeight)) + (int)(1 * 342.0f * (1.0f / 1920 * m_showHeight)), "/AnimMove/03/");
-            m_PreviewList[3] = new Preview((int)(65.0f * (1.0f / 1080 * m_showWidth)) + (int)(1 * 360.0f * (1.0f / 1080 * m_showWidth)),
-                (int)(56.0f * (1.0f / 1920 * m_showHeight)) + (int)(1 * 342.0f * (1.0f / 1920 * m_showHeight)), "/AnimMove/04/");
-            m_PreviewList[4] = new Preview((int)(65.0f * (1.0f / 1080 * m_showWidth)) + (int)(2 * 360.0f * (1.0f / 1080 * m_showWidth)),
-                (int)(56.0f * (1.0f / 1920 * m_showHeight)) + (int)(1 * 342.0f * (1.0f / 1920 * m_showHeight)), "/AnimMove/05/");
-            m_PreviewList[5] = new Preview((int)(65.0f * (1.0f / 1080 * m_showWidth)) + (int)(0 * 360.0f * (1.0f / 1080 * m_showWidth)),
-                (int)(56.0f * (1.0f / 1920 * m_showHeight)) + (int)(2 * 342.0f * (1.0f / 1920 * m_showHeight)), "/AnimMove/06/");
-            m_PreviewList[6] = new Preview((int)(65.0f * (1.0f / 1080 * m_showWidth)) + (int)(1 * 360.0f * (1.0f / 1080 * m_showWidth)),
-                (int)(56.0f * (1.0f / 1920 * m_showHeight)) + (int)(2 * 342.0f * (1.0f / 1920 * m_showHeight)), "/AnimMove/07/");
-            m_PreviewList[7] = new Preview((int)(65.0f * (1.0f / 1080 * m_showWidth)) + (int)(2 * 360.0f * (1.0f / 1080 * m_showWidth)),
-                (int)(56.0f * (1.0f / 1920 * m_showHeight)) + (int)(2 * 342.0f * (1.0f / 1920 * m_showHeight)), "/AnimMove/08/");
-            m_PreviewList[8] = new Preview((int)(65.0f * (1.0f / 1080 * m_showWidth)) + (int)(0 * 360.0f * (1.0f / 1080 * m_showWidth)),
-                (int)(56.0f * (1.0f / 1920 * m_showHeight)) + (int)(3 * 342.0f * (1.0f / 1920 * m_showHeight)), "/AnimMove/09/");
-            m_PreviewList[9] = new Preview((int)(65.0f * (1.0f / 1080 * m_showWidth)) + (int)(1 * 360.0f * (1.0f / 1080 * m_showWidth)),
-                (int)(56.0f * (1.0f / 1920 * m_showHeight)) + (int)(3 * 342.0f * (1.0f / 1920 * m_showHeight)), "/AnimMove/10/");
-            m_PreviewList[10] = new Preview((int)(65.0f * (1.0f / 1080 * m_showWidth)) + (int)(2 * 360.0f * (1.0f / 1080 * m_showWidth)),
-                (int)(56.0f * (1.0f / 1920 * m_showHeight)) + (int)(3 * 342.0f * (1.0f / 1920 * m_showHeight)), "/AnimMove/11/");
-            m_PreviewList[11] = new Preview((int)(65.0f * (1.0f / 1080 * m_showWidth)) + (int)(0 * 360.0f * (1.0f / 1080 * m_showWidth)),
-                (int)(56.0f * (1.0f / 1920 * m_showHeight)) + (int)(4 * 342.0f * (1.0f / 1920 * m_showHeight)), "/AnimMove/12/");
-            m_PreviewList[12] = new Preview((int)(65.0f * (1.0f / 1080 * m_showWidth)) + (int)(1 * 360.0f * (1.0f / 1080 * m_showWidth)),
-                (int)(56.0f * (1.0f / 1920 * m_showHeight)) + (int)(4 * 342.0f * (1.0f / 1920 * m_showHeight)), "/AnimMove/13/");
-            m_PreviewList[13] = new Preview((int)(65.0f * (1.0f / 1080 * m_showWidth)) + (int)(2 * 360.0f * (1.0f / 1080 * m_showWidth)),
-                (int)(56.0f * (1.0f / 1920 * m_showHeight)) + (int)(4 * 342.0f * (1.0f / 1920 * m_showHeight)), "/AnimMove/14/");
-            
+            String startImgPath = System.IO.Path.GetDirectoryName(Application.ResourceAssembly.Location) + @"/AppTex/" + @"startInfo.jpg";
+            startInfoTex = new BitmapImage(new Uri(startImgPath, UriKind.Absolute));
 
+            String titleImgPath = System.IO.Path.GetDirectoryName(Application.ResourceAssembly.Location) + @"/AppTex/" + @"title.png";
+            titleTex = new BitmapImage(new Uri(titleImgPath, UriKind.Absolute));
 
-            bool result = LoadPic("/Tex/", out ImageList);
-            result = LoadPic("/InfoTex/", out InfoImageList);
-            result = LoadPic("/MoveTex/", out MoveImageList);
+            bool result = LoadPic("/Tex/", out TexList);
+            result = LoadPic("/InfoTex/", out InfoTexList);
+            result = LoadPic("/MoveTex/", out MoveAnimList);
+            result = LoadPic("/HintTex/", out HintList);
+
+            result = LoadPicImage("/Tex/", out TexImageList);
+
+            result = LoadPicImage("/InfoTex/", out InfoTexImageList);
+
+            scrollAnim = new Preview(infoX, infoY, "/InfoAnim/");
 
             LoadConfig();
 
             stackCount = 20;
             moveStack = new int[stackCount];
+
+            SetShowMode();
         }
-
-
-
-        /// <summary>
-        /// Execute start up tasks
-        /// </summary>
-        /// <param name="sender">object sending the event</param>
-        /// <param name="e">event arguments</param>
-        private void MainWindow_Loaded(object sender, RoutedEventArgs e)
-        {
-            if (this.bodyFrameReader != null)
-            {
-                this.bodyFrameReader.FrameArrived += this.Reader_FrameArrived;
-            }
-        }
-
-        /// <summary>
-        /// Execute shutdown tasks
-        /// </summary>
-        /// <param name="sender">object sending the event</param>
-        /// <param name="e">event arguments</param>
-        private void MainWindow_Closing(object sender, CancelEventArgs e)
-        {
-            if (this.bodyFrameReader != null)
-            {
-                // BodyFrameReader is IDisposable
-                this.bodyFrameReader.Dispose();
-                this.bodyFrameReader = null;
-            }
-
-            if (this.kinectSensor != null)
-            {
-                this.kinectSensor.Close();
-                this.kinectSensor = null;
-            }
-        }
-
-        private bool LoadPic()
-        {
-            if (ImageList == null)
-            {
-                ImageList = new List<BitmapImage>();
-            }
-
-            String imgFolder = System.IO.Path.GetDirectoryName(Application.ResourceAssembly.Location) + @"/Tex/";
-            if (!Directory.Exists(imgFolder))
-                return false;
-
-            DirectoryInfo ImgFolderInfo = new DirectoryInfo(imgFolder);
-
-
-            List<String> fileList = new List<String>();
-            foreach (FileInfo nextFile in ImgFolderInfo.GetFiles())
-            {
-                fileList.Add(nextFile.FullName);
-            }
-
-            int imgCount = fileList.Count;
-            ImageList.Clear();
-
-            for (int i = 0; i < imgCount; i++)
-            {
-                String imgPath = fileList[i];
-                bool isExist = File.Exists(imgPath.ToString());
-                if (isExist)
-                {
-                    BitmapImage newImage = new BitmapImage(new Uri(imgPath, UriKind.Absolute));
-                    ImageList.Add(newImage);
-                }
-
-            }
-            return true;
-        }
-
-
-
-
-        private bool LoadPic(string folderName, out List<BitmapImage> texList)
-        {
-            texList = new List<BitmapImage>();
-
-            String imgFolder = System.IO.Path.GetDirectoryName(Application.ResourceAssembly.Location) + folderName;
-            if (!Directory.Exists(imgFolder))
-                return false;
-
-            DirectoryInfo ImgFolderInfo = new DirectoryInfo(imgFolder);
-
-
-            List<String> fileList = new List<String>();
-            foreach (FileInfo nextFile in ImgFolderInfo.GetFiles())
-            {
-                fileList.Add(nextFile.FullName);
-            }
-
-            int imgCount = fileList.Count;
-            texList.Clear();
-
-            for (int i = 0; i < imgCount; i++)
-            {
-                String imgPath = fileList[i];
-                bool isExist = File.Exists(imgPath.ToString());
-                if (isExist)
-                {
-                    BitmapImage newImage = new BitmapImage(new Uri(imgPath, UriKind.Absolute));
-                    texList.Add(newImage);
-                }
-
-            }
-            return true;
-        }
-
-
-        void LoadConfig()
-        {
-            String configPath = System.IO.Path.GetDirectoryName(Application.ResourceAssembly.Location) + @"/config.txt";
-            if (File.Exists(configPath))
-            {
-                StreamReader sr = new StreamReader(configPath, Encoding.Default);
-
-                string detectCenterX_S = null;
-                string detectCenterY_S = null;
-                string detectRadius_S = null;
-
-                int tempNum = -1;
-
-                if (sr.Peek() > 0)
-                {
-                    detectCenterX_S = sr.ReadLine();
-                    if (detectCenterX_S != "" || detectCenterX_S != null)
-                    {
-                        tempNum = GetNum(detectCenterX_S, "DetectCenterX");
-                        if (tempNum != -1)
-                        {
-                            detectCenter.X = tempNum / 100.0f;
-                        }
-                    }
-                }
-                if (sr.Peek() > 0)
-                {
-                    detectCenterY_S = sr.ReadLine();
-                    if (detectCenterY_S != "" || detectCenterY_S != null)
-                    {
-                        tempNum = GetNum(detectCenterY_S, "DetectCenterY");
-                        if (tempNum != -1)
-                        {
-                            detectCenter.Y = tempNum / 100.0f;
-                        }
-                    }
-                }
-                if (sr.Peek() > 0)
-                {
-                    detectRadius_S = sr.ReadLine();
-                    if (detectRadius_S != "" || detectRadius_S != null)
-                    {
-                        tempNum = GetNum(detectRadius_S, "DetectRadius");
-                        if (tempNum != -1)
-                        {
-                            detectRadius = tempNum / 100.0f;
-                        }
-                    }
-                }
-                sr.Close();
-
-            }
-        }
-
-        private int GetNum(string str, string markStr)
-        {
-            int num = -1;
-
-            string pattern = markStr + @":[0-9]*";
-            string result = Regex.Match(str, pattern).Value;
-            string patternGetNum = @"[0-9]\d*";
-            string num_result = Regex.Match(result, patternGetNum).Value;
-
-            num = System.Int32.Parse(num_result);
-            return num;
-        }
-
 
         /// <summary>
         /// Handles the body frame data arriving from the sensor
@@ -663,20 +549,17 @@ namespace Microsoft.Samples.Kinect.SkeletonRecord
                 using (DrawingContext dc = this.drawingGroup.Open())
                 {
                     // Draw a transparent background to set the render size
-                    dc.DrawRectangle(Brushes.Black, null, new Rect(0.0, 0.0, 160/*this.displayWidth*/, 240/*this.displayHeight*/));
+                    dc.DrawRectangle(Brushes.Black, null, new Rect(0.0, 0.0, m_showWidth,m_showHeight));
 
-                    dc.DrawImage(colorBitmap, new Rect(colorFrameOffset, 0, (int)(m_kinectDrawHeight * (16.0f / 9.0f)), m_kinectDrawHeight));
+                    dc.DrawImage(colorBitmap, new Rect(colorFrameOffsetX, colorFrameOffsetY, m_kinectDrawWidth, m_kinectDrawHeight));
                     int penIndex = 0;
+                    //找到圈子范围内最靠前的人
+                    Body bodyFound = null;
+                    float minZ = 100000;
                     foreach (Body body in this.bodies)
                     {
-                        Pen drawPen = this.bodyColors[penIndex++];
-                        SolidColorBrush bodyBrush= new SolidColorBrush(Color.FromArgb(255, 104, 25, 15));
-                        drawPen = new Pen(bodyBrush, 6);
-
                         if (body.IsTracked)
                         {
-                            //this.DrawClippedEdges(body, dc);
-
                             IReadOnlyDictionary<JointType, Joint> joints = body.Joints;
                             //去除不在范围内的人
                             Point basePoint = new Point(joints[JointType.SpineBase].Position.X, joints[JointType.SpineBase].Position.Z);
@@ -685,6 +568,29 @@ namespace Microsoft.Samples.Kinect.SkeletonRecord
                             {
                                 continue;
                             }
+                            if(joints[JointType.SpineBase].Position.Z < minZ)
+                            {
+                                bodyFound = body;
+                                minZ = joints[JointType.SpineBase].Position.Z;
+                            }
+
+                        }
+                    }
+
+                    m_lastBodyTracked = m_bodyTracked;
+                    m_bodyTracked = false;
+                    flag = -1;
+                    if (bodyFound != null && bodyFound.IsTracked)
+                    {
+                        Pen drawPen = this.bodyColors[penIndex++];
+                        SolidColorBrush bodyBrush = new SolidColorBrush(Color.FromArgb(255, 78, 204, 51));
+                        drawPen = new Pen(bodyBrush, 6);
+
+                        if (bodyFound.IsTracked)
+                        {
+                            //this.DrawClippedEdges(body, dc);
+
+                            IReadOnlyDictionary<JointType, Joint> joints = bodyFound.Joints;
 
                             // convert the joint points to depth (display) space
                             Dictionary<JointType, Point> jointPoints = new Dictionary<JointType, Point>();
@@ -701,86 +607,1670 @@ namespace Microsoft.Samples.Kinect.SkeletonRecord
 
                                 DepthSpacePoint depthSpacePoint = this.coordinateMapper.MapCameraPointToDepthSpace(position);
                                 //jointPoints[jointType] = new Point(depthSpacePoint.X, depthSpacePoint.Y);
-                                jointPoints[jointType] = new Point(colorFrameOffset/2.7f + depthSpacePoint.X / this.displayHeight * m_kinectDrawHeight, depthSpacePoint.Y / this.displayHeight * m_kinectDrawHeight);
+                                jointPoints[jointType] = new Point(colorFrameOffsetX - 0.45f * colorFrameOffsetX + depthSpacePoint.X / this.displayWidth * m_kinectDrawWidth * 0.85f, colorFrameOffsetY * 0.85f + depthSpacePoint.Y / this.displayHeight * m_kinectDrawHeight * 1.1f);
                             }
 
-                            //记录骨骼
-                            //if(m_bIsRecording)
-                                //RecordSkelton(joints);
+                            m_bodyTracked = true;
+                            //flag = Judge(joints, jointPoints);
 
-                            flag = Judge(joints, jointPoints);
+                            //this.DrawBody(joints, jointPoints, dc, drawPen);
 
-                            
-                            this.DrawBody(joints, jointPoints, dc, drawPen);
-
-                            //this.DrawHand(body.HandLeftState, jointPoints[JointType.HandLeft], dc);
+                            //this.DrawHand(bodyFound.HandLeftState, jointPoints[JointType.HandLeft], dc);
                             //this.DrawHand(body.HandRightState, jointPoints[JointType.HandRight], dc);
+
+                            bool res = false;
+                            res = JudgeWithIndex(m_intFlagToShow, joints, jointPoints, dc, drawPen);
+                            if(res)
+                            {
+                                flag = m_intFlagToShow;
+                            }
+                            else
+                            {
+                                flag = -1;
+                            }
+
                         }
                     }
 
                     // prevent drawing outside of our render area
-                    this.drawingGroup.ClipGeometry = new RectangleGeometry(new Rect(0.0, 0.0, m_kinectDrawWidth/*this.displayWidth*/, m_kinectDrawHeight/*this.displayHeight*/));
+                    this.drawingGroup.ClipGeometry = new RectangleGeometry(new Rect(0.0, 0.0, m_showWidth, m_kinectDrawHeight + colorFrameOffsetY));
                 }
             }
 
-            
-//             {
-//                 using (DrawingContext dc = this.drawingPicGroup.Open())
-//                 {
-//                     DrawShow(dc, flag);
-//                     
-//                 }
-//             }
-
         }
 
-        /// <summary>
-        /// Handles the color frame data arriving from the sensor
-        /// </summary>
-        /// <param name="sender">object sending the event</param>
-        /// <param name="e">event arguments</param>
-        private void Reader_ColorFrameArrived(object sender, ColorFrameArrivedEventArgs e)
+        private bool JudgeWithIndex(int index, IReadOnlyDictionary<JointType, Joint> joints, IDictionary<JointType, Point> jointPoints, DrawingContext drawingContext, Pen drawingPen)
         {
-            // ColorFrame is IDisposable
-            using (ColorFrame colorFrame = e.FrameReference.AcquireFrame())
+            DrawJoint(joints, jointPoints, drawingContext);
+            bool success = false;
+            if(index == 0)
             {
-                if (colorFrame != null)
+                success = this.DrawTargetBody_0(joints, jointPoints, drawingContext, drawingPen);
+            }
+            if (index == 1)
+            {
+                success = this.DrawTargetBody_1(joints, jointPoints, drawingContext, drawingPen);
+            }
+            if (index == 2)
+            {
+                success = this.DrawTargetBody_2(joints, jointPoints, drawingContext, drawingPen);
+            }
+            if (index == 3)
+            {
+                success = this.DrawTargetBody_3(joints, jointPoints, drawingContext, drawingPen);
+            }
+            if (index == 4)
+            {
+                success = this.DrawTargetBody_4(joints, jointPoints, drawingContext, drawingPen);
+            }
+
+            if (index == 5)
+            {
+                success = this.DrawTargetBody_5(joints, jointPoints, drawingContext, drawingPen);
+            }
+
+            if (index == 6)
+            {
+                success = this.DrawTargetBody_6(joints, jointPoints, drawingContext, drawingPen);
+            }
+
+            if (index == 7)
+            {
+                success = this.DrawTargetBody_7(joints, jointPoints, drawingContext, drawingPen);
+            }
+
+            if (index == 8)
+            {
+                success = this.DrawTargetBody_2(joints, jointPoints, drawingContext, drawingPen);
+            }
+
+            if (index == 9)
+            {
+                success = this.DrawTargetBody_9(joints, jointPoints, drawingContext, drawingPen);
+            }
+
+            if (index == 10)
+            {
+                success = this.DrawTargetBody_10(joints, jointPoints, drawingContext, drawingPen);
+            }
+
+            if (index == 11)
+            {
+                success = this.DrawTargetBody_4(joints, jointPoints, drawingContext, drawingPen);
+            }
+
+            if (index == 12)
+            {
+                success = this.DrawTargetBody_12(joints, jointPoints, drawingContext, drawingPen);
+            }
+
+            if (index == 13)
+            {
+                success = this.DrawTargetBody_13(joints, jointPoints, drawingContext, drawingPen);
+            }
+            return success;
+
+
+        }
+
+        bool CheckBone(float p, float checkLimit, out Brush drawBrush)
+        {
+            bool check = false;
+            if (p > checkLimit)
+            {
+                drawBrush = new SolidColorBrush(Color.FromArgb((byte)(p * 255), 78, 204, 51));
+                check = true;
+            }
+            else
+            {
+                drawBrush = new SolidColorBrush(Color.FromArgb((byte)(p * 255), 255, 255, 255));
+                check = false;
+            }
+
+            return check;
+        }
+
+        private bool DrawTargetBody_0(IReadOnlyDictionary<JointType, Joint> joints, IDictionary<JointType, Point> jointPoints, DrawingContext drawingContext, Pen drawingPen)
+        {
+
+            Brush drawBrush = new SolidColorBrush(Color.FromArgb(255, 255, 255, 255));
+
+            //左肩到左肘的连线
+            double deltaLShoulderToLElbow_X = jointPoints[JointType.ElbowLeft].X - jointPoints[JointType.ShoulderLeft].X;
+            double deltaLShoulderToLElbow_Y = jointPoints[JointType.ElbowLeft].Y - jointPoints[JointType.ShoulderLeft].Y;
+            double lenghLShoulderToLElbow = Math.Sqrt(deltaLShoulderToLElbow_X * deltaLShoulderToLElbow_X + deltaLShoulderToLElbow_Y * deltaLShoulderToLElbow_Y);
+            double degreeLShoulderToLElbow = deltaLShoulderToLElbow_Y / deltaLShoulderToLElbow_X;
+            double degreeLShoulderToLElbowCos = deltaLShoulderToLElbow_X / lenghLShoulderToLElbow;
+
+            //左肘到左腕的连线
+            double deltaLElbowToLWrist_X = jointPoints[JointType.WristLeft].X - jointPoints[JointType.ElbowLeft].X;
+            double deltaLElbowToLWrist_Y = jointPoints[JointType.WristLeft].Y - jointPoints[JointType.ElbowLeft].Y;
+            double lenghLElbowToLWrist = Math.Sqrt(deltaLElbowToLWrist_X * deltaLElbowToLWrist_X + deltaLElbowToLWrist_Y * deltaLElbowToLWrist_Y);
+            double degreeLElbowToLWrist = deltaLElbowToLWrist_Y / deltaLElbowToLWrist_X;
+            double degreeLElbowToLWristCos = deltaLElbowToLWrist_X / lenghLElbowToLWrist;
+
+
+            //右肩到右肘的连线
+            double deltaRShoulderToRElbow_X = jointPoints[JointType.ElbowRight].X - jointPoints[JointType.ShoulderRight].X;
+            double deltaRShoulderToRElbow_Y = jointPoints[JointType.ElbowRight].Y - jointPoints[JointType.ShoulderRight].Y;
+            double lenghRShoulderToRElbow = Math.Sqrt(deltaRShoulderToRElbow_X * deltaRShoulderToRElbow_X + deltaRShoulderToRElbow_Y * deltaRShoulderToRElbow_Y);
+            double degreeRShoulderToRElbow = deltaRShoulderToRElbow_Y / deltaRShoulderToRElbow_X;
+            double degreeRShoulderToRElbowCos = deltaRShoulderToRElbow_X / lenghRShoulderToRElbow;
+
+            //右肘到右腕的连线
+            double deltaRElbowToRWrist_X = jointPoints[JointType.WristRight].X - jointPoints[JointType.ElbowRight].X;
+            double deltaRElbowToRWrist_Y = jointPoints[JointType.WristRight].Y - jointPoints[JointType.ElbowRight].Y;
+            double lenghRElbowToRWrist = Math.Sqrt(deltaRElbowToRWrist_X * deltaRElbowToRWrist_X + deltaRElbowToRWrist_Y * deltaRElbowToRWrist_Y);
+            double degreeRElbowToRWrist = deltaRElbowToRWrist_Y / deltaRElbowToRWrist_X;
+            double degreeRElbowToRWristCos = deltaRElbowToRWrist_X / lenghRElbowToRWrist;
+
+            //腰到头的连线的角度
+            double deltaHipToHead_X = jointPoints[JointType.Head].X - jointPoints[JointType.SpineBase].X;
+            double deltaHipToHead_Y = jointPoints[JointType.Head].Y - jointPoints[JointType.SpineBase].Y;
+            double lenghHipToHead = Math.Sqrt(deltaHipToHead_X * deltaHipToHead_X + deltaHipToHead_Y * deltaHipToHead_Y);
+            double degreeHipToHead = deltaHipToHead_Y / deltaHipToHead_X;
+            double degreeHipToHeadCos = deltaHipToHead_X / lenghHipToHead;
+
+            bool checkAll = true;
+            float checkLimit = 0.5f;
+            // Draw the bones
+            foreach (var bone in this.bones)
+            {
+                if ((bone.Item1 == JointType.WristLeft && bone.Item2 == JointType.HandLeft)
+                    || (bone.Item1 == JointType.WristRight && bone.Item2 == JointType.HandRight)
+                    || (bone.Item1 == JointType.HandLeft && bone.Item2 == JointType.HandTipLeft)
+                    || (bone.Item1 == JointType.HandRight && bone.Item2 == JointType.HandTipRight)
+                    || (bone.Item1 == JointType.WristLeft && bone.Item2 == JointType.ThumbLeft)
+                    || (bone.Item1 == JointType.WristRight && bone.Item2 == JointType.ThumbRight))
                 {
-                    FrameDescription colorFrameDescription = colorFrame.FrameDescription;
+                    continue;
+                }
+                drawBrush = null;
 
-                    using (KinectBuffer colorBuffer = colorFrame.LockRawImageBuffer())
-                    {
-                        this.colorBitmap.Lock();
+                Pen newPen = drawingPen;
 
-                        // verify data and write the new color frame data to the display bitmap
-                        if ((colorFrameDescription.Width == this.colorBitmap.PixelWidth) && (colorFrameDescription.Height == this.colorBitmap.PixelHeight))
-                        {
-                            colorFrame.CopyConvertedFrameDataToIntPtr(
-                                this.colorBitmap.BackBuffer,
-                                (uint)(colorFrameDescription.Width * colorFrameDescription.Height * 4),
-                                ColorImageFormat.Bgra);
+                double p = -1;
+                if (bone.Item1 == JointType.ShoulderLeft && bone.Item2 == JointType.ElbowLeft)
+                {
+                    p = Math.Abs(degreeLShoulderToLElbowCos - (Math.Cos(Math.PI * 0.25 + Math.PI * 0.5)));
+                    p = 1 - Math.Min(p, 1);
+                    p = deltaLShoulderToLElbow_Y > 0 ? p : 0;
+                    
+                    checkAll &= CheckBone((float)p, checkLimit, out drawBrush);
+                }
+                if (bone.Item1 == JointType.ElbowLeft && bone.Item2 == JointType.WristLeft)
+                {
+                    p = Math.Abs(degreeLElbowToLWristCos - (Math.Cos(Math.PI * 0.25 + Math.PI * 0.5)));
+                    p = 1 - Math.Min(p, 1);
+                    p = deltaLElbowToLWrist_Y > 0 ? p : 0;
+                    checkAll &= CheckBone((float)p, checkLimit, out drawBrush);
+                }
 
-                            this.colorBitmap.AddDirtyRect(new Int32Rect(0, 0, this.colorBitmap.PixelWidth, this.colorBitmap.PixelHeight));
-                        }
+                if (bone.Item1 == JointType.ShoulderRight && bone.Item2 == JointType.ElbowRight)
+                {
+                    p = Math.Abs(degreeRShoulderToRElbowCos - (Math.Cos(Math.PI * 0)));
+                    p = 1 - Math.Min(p, 1);
+                    p = deltaRShoulderToRElbow_X > 0 ? p : 0;
+                    checkAll &= CheckBone((float)p, checkLimit, out drawBrush);
+                }
+                if (bone.Item1 == JointType.ElbowRight && bone.Item2 == JointType.WristRight)
+                {
+                    p = Math.Abs(degreeRElbowToRWristCos - (Math.Cos(Math.PI * 0.25 + Math.PI * 0.5)));
+                    p = 1 - Math.Min(p, 1);
+                    p = deltaRElbowToRWrist_Y > 0 ? p : 0;
 
-                        this.colorBitmap.Unlock();
-                    }
+                    checkAll &= CheckBone((float)p, checkLimit, out drawBrush);
+                }
+                if ((bone.Item1 == JointType.Head && bone.Item2 == JointType.Neck) ||
+                    (bone.Item1 == JointType.Neck && bone.Item2 == JointType.SpineShoulder) ||
+                    (bone.Item1 == JointType.SpineShoulder && bone.Item2 == JointType.SpineMid) ||
+                    (bone.Item1 == JointType.SpineMid && bone.Item2 == JointType.SpineBase))
+                {
+                    p = Math.Abs(degreeHipToHeadCos - (Math.Cos(Math.PI * 0.33 + Math.PI)));
+                    p = 1 - Math.Min(p, 1);
+                    p = deltaHipToHead_Y < 0 ? p : 0;
+
+                    checkAll &= CheckBone((float)p, checkLimit, out drawBrush);
+                }
+
+                if(p != -1)
+                    newPen = new Pen(drawBrush, 6);
+
+                this.DrawBone(joints, jointPoints, bone.Item1, bone.Item2, drawingContext, newPen);
+            }
+
+            return checkAll;
+        }
+
+        private bool DrawTargetBody_1(IReadOnlyDictionary<JointType, Joint> joints, IDictionary<JointType, Point> jointPoints, DrawingContext drawingContext, Pen drawingPen)
+        {
+
+            Brush drawBrush = new SolidColorBrush(Color.FromArgb(255, 255, 255, 255));
+
+            //左肩到左肘的连线
+            double deltaLShoulderToLElbow_X = jointPoints[JointType.ElbowLeft].X - jointPoints[JointType.ShoulderLeft].X;
+            double deltaLShoulderToLElbow_Y = jointPoints[JointType.ElbowLeft].Y - jointPoints[JointType.ShoulderLeft].Y;
+            double lenghLShoulderToLElbow = Math.Sqrt(deltaLShoulderToLElbow_X * deltaLShoulderToLElbow_X + deltaLShoulderToLElbow_Y * deltaLShoulderToLElbow_Y);
+            double degreeLShoulderToLElbow = deltaLShoulderToLElbow_Y / deltaLShoulderToLElbow_X;
+            double degreeLShoulderToLElbowCos = deltaLShoulderToLElbow_X / lenghLShoulderToLElbow;
+
+            //左肘到左腕的连线
+            double deltaLElbowToLWrist_X = jointPoints[JointType.WristLeft].X - jointPoints[JointType.ElbowLeft].X;
+            double deltaLElbowToLWrist_Y = jointPoints[JointType.WristLeft].Y - jointPoints[JointType.ElbowLeft].Y;
+            double lenghLElbowToLWrist = Math.Sqrt(deltaLElbowToLWrist_X * deltaLElbowToLWrist_X + deltaLElbowToLWrist_Y * deltaLElbowToLWrist_Y);
+            double degreeLElbowToLWrist = deltaLElbowToLWrist_Y / deltaLElbowToLWrist_X;
+            double degreeLElbowToLWristCos = deltaLElbowToLWrist_X / lenghLElbowToLWrist;
+
+
+            //右肩到右肘的连线
+            double deltaRShoulderToRElbow_X = jointPoints[JointType.ElbowRight].X - jointPoints[JointType.ShoulderRight].X;
+            double deltaRShoulderToRElbow_Y = jointPoints[JointType.ElbowRight].Y - jointPoints[JointType.ShoulderRight].Y;
+            double lenghRShoulderToRElbow = Math.Sqrt(deltaRShoulderToRElbow_X * deltaRShoulderToRElbow_X + deltaRShoulderToRElbow_Y * deltaRShoulderToRElbow_Y);
+            double degreeRShoulderToRElbow = deltaRShoulderToRElbow_Y / deltaRShoulderToRElbow_X;
+            double degreeRShoulderToRElbowCos = deltaRShoulderToRElbow_X / lenghRShoulderToRElbow;
+
+            //右肘到右腕的连线
+            double deltaRElbowToRWrist_X = jointPoints[JointType.WristRight].X - jointPoints[JointType.ElbowRight].X;
+            double deltaRElbowToRWrist_Y = jointPoints[JointType.WristRight].Y - jointPoints[JointType.ElbowRight].Y;
+            double lenghRElbowToRWrist = Math.Sqrt(deltaRElbowToRWrist_X * deltaRElbowToRWrist_X + deltaRElbowToRWrist_Y * deltaRElbowToRWrist_Y);
+            double degreeRElbowToRWrist = deltaRElbowToRWrist_Y / deltaRElbowToRWrist_X;
+            double degreeRElbowToRWristCos = deltaRElbowToRWrist_X / lenghRElbowToRWrist;
+
+            //腰到头的连线的角度
+            double deltaHipToHead_X = jointPoints[JointType.Head].X - jointPoints[JointType.SpineBase].X;
+            double deltaHipToHead_Y = jointPoints[JointType.Head].Y - jointPoints[JointType.SpineBase].Y;
+            double lenghHipToHead = Math.Sqrt(deltaHipToHead_X * deltaHipToHead_X + deltaHipToHead_Y * deltaHipToHead_Y);
+            double degreeHipToHead = deltaHipToHead_Y / deltaHipToHead_X;
+            double degreeHipToHeadCos = deltaHipToHead_X / lenghHipToHead;
+
+            bool checkAll = true;
+            float checkLimit = 0.5f;
+            // Draw the bones
+            foreach (var bone in this.bones)
+            {
+                if ((bone.Item1 == JointType.WristLeft && bone.Item2 == JointType.HandLeft)
+                    || (bone.Item1 == JointType.WristRight && bone.Item2 == JointType.HandRight)
+                    || (bone.Item1 == JointType.HandLeft && bone.Item2 == JointType.HandTipLeft)
+                    || (bone.Item1 == JointType.HandRight && bone.Item2 == JointType.HandTipRight)
+                    || (bone.Item1 == JointType.WristLeft && bone.Item2 == JointType.ThumbLeft)
+                    || (bone.Item1 == JointType.WristRight && bone.Item2 == JointType.ThumbRight))
+                {
+                    continue;
+                }
+                drawBrush = null;
+
+                Pen newPen = drawingPen;
+
+                double p = -1;
+                if (bone.Item1 == JointType.ShoulderLeft && bone.Item2 == JointType.ElbowLeft)
+                {
+                    p = Math.Abs(degreeLShoulderToLElbowCos - (Math.Cos(Math.PI * 0.5)));
+                    p = 1 - Math.Min(p, 1);
+                    p = deltaLShoulderToLElbow_Y > 0 ? p : 0;
+
+                    checkAll &= CheckBone((float)p, checkLimit, out drawBrush);
+                }
+                if (bone.Item1 == JointType.ElbowLeft && bone.Item2 == JointType.WristLeft)
+                {
+                    p = Math.Abs(degreeLElbowToLWristCos - (Math.Cos(Math.PI * 0.5)));
+                    p = 1 - Math.Min(p, 1);
+                    p = deltaLElbowToLWrist_Y > 0 ? p : 0;
+
+                    checkAll &= CheckBone((float)p, checkLimit, out drawBrush);
+                }
+
+                if (bone.Item1 == JointType.ShoulderRight && bone.Item2 == JointType.ElbowRight)
+                {
+                    p = Math.Abs(degreeRShoulderToRElbowCos - (Math.Cos(Math.PI * 0)));
+                    p = 1 - Math.Min(p, 1);
+                    p = deltaRShoulderToRElbow_X > 0 ? p : 0;
+                    p = deltaRShoulderToRElbow_Y < 0 ? p : 0;
+                    checkAll &= CheckBone((float)p, checkLimit, out drawBrush);
+                }
+                if (bone.Item1 == JointType.ElbowRight && bone.Item2 == JointType.WristRight)
+                {
+                    p = Math.Abs(degreeRElbowToRWristCos - (Math.Cos(Math.PI * 0.25 + Math.PI)));
+                    p = 1 - Math.Min(p, 1);
+                    p = deltaRElbowToRWrist_Y < 0 ? p : 0;
+
+                    checkAll &= CheckBone((float)p, checkLimit, out drawBrush);
+                }
+                if ((bone.Item1 == JointType.Head && bone.Item2 == JointType.Neck) ||
+                    (bone.Item1 == JointType.Neck && bone.Item2 == JointType.SpineShoulder) ||
+                    (bone.Item1 == JointType.SpineShoulder && bone.Item2 == JointType.SpineMid) ||
+                    (bone.Item1 == JointType.SpineMid && bone.Item2 == JointType.SpineBase))
+                {
+                    p = Math.Abs(degreeHipToHeadCos - (Math.Cos(Math.PI * 0.33 + Math.PI)));
+                    p = 1 - Math.Min(p, 1);
+                    p = deltaHipToHead_X < 0 ? p : 0;
+
+                    checkAll &= CheckBone((float)p, checkLimit, out drawBrush);
+                }
+
+                if (p != -1)
+                    newPen = new Pen(drawBrush, 6);
+
+                this.DrawBone(joints, jointPoints, bone.Item1, bone.Item2, drawingContext, newPen);
+            }
+
+            return checkAll;
+        }
+
+        private bool DrawTargetBody_2(IReadOnlyDictionary<JointType, Joint> joints, IDictionary<JointType, Point> jointPoints, DrawingContext drawingContext, Pen drawingPen)
+        {
+
+            Brush drawBrush = new SolidColorBrush(Color.FromArgb(255, 255, 255, 255));
+
+            //左肩到左肘的连线
+            double deltaLShoulderToLElbow_X = jointPoints[JointType.ElbowLeft].X - jointPoints[JointType.ShoulderLeft].X;
+            double deltaLShoulderToLElbow_Y = jointPoints[JointType.ElbowLeft].Y - jointPoints[JointType.ShoulderLeft].Y;
+            double lenghLShoulderToLElbow = Math.Sqrt(deltaLShoulderToLElbow_X * deltaLShoulderToLElbow_X + deltaLShoulderToLElbow_Y * deltaLShoulderToLElbow_Y);
+            double degreeLShoulderToLElbow = deltaLShoulderToLElbow_Y / deltaLShoulderToLElbow_X;
+            double degreeLShoulderToLElbowCos = deltaLShoulderToLElbow_X / lenghLShoulderToLElbow;
+
+            //左肘到左腕的连线
+            double deltaLElbowToLWrist_X = jointPoints[JointType.WristLeft].X - jointPoints[JointType.ElbowLeft].X;
+            double deltaLElbowToLWrist_Y = jointPoints[JointType.WristLeft].Y - jointPoints[JointType.ElbowLeft].Y;
+            double lenghLElbowToLWrist = Math.Sqrt(deltaLElbowToLWrist_X * deltaLElbowToLWrist_X + deltaLElbowToLWrist_Y * deltaLElbowToLWrist_Y);
+            double degreeLElbowToLWrist = deltaLElbowToLWrist_Y / deltaLElbowToLWrist_X;
+            double degreeLElbowToLWristCos = deltaLElbowToLWrist_X / lenghLElbowToLWrist;
+
+
+            //右肩到右肘的连线
+            double deltaRShoulderToRElbow_X = jointPoints[JointType.ElbowRight].X - jointPoints[JointType.ShoulderRight].X;
+            double deltaRShoulderToRElbow_Y = jointPoints[JointType.ElbowRight].Y - jointPoints[JointType.ShoulderRight].Y;
+            double lenghRShoulderToRElbow = Math.Sqrt(deltaRShoulderToRElbow_X * deltaRShoulderToRElbow_X + deltaRShoulderToRElbow_Y * deltaRShoulderToRElbow_Y);
+            double degreeRShoulderToRElbow = deltaRShoulderToRElbow_Y / deltaRShoulderToRElbow_X;
+            double degreeRShoulderToRElbowCos = deltaRShoulderToRElbow_X / lenghRShoulderToRElbow;
+
+            //右肘到右腕的连线
+            double deltaRElbowToRWrist_X = jointPoints[JointType.WristRight].X - jointPoints[JointType.ElbowRight].X;
+            double deltaRElbowToRWrist_Y = jointPoints[JointType.WristRight].Y - jointPoints[JointType.ElbowRight].Y;
+            double lenghRElbowToRWrist = Math.Sqrt(deltaRElbowToRWrist_X * deltaRElbowToRWrist_X + deltaRElbowToRWrist_Y * deltaRElbowToRWrist_Y);
+            double degreeRElbowToRWrist = deltaRElbowToRWrist_Y / deltaRElbowToRWrist_X;
+            double degreeRElbowToRWristCos = deltaRElbowToRWrist_X / lenghRElbowToRWrist;
+
+            //腰到头的连线的角度
+            double deltaHipToHead_X = jointPoints[JointType.Head].X - jointPoints[JointType.SpineBase].X;
+            double deltaHipToHead_Y = jointPoints[JointType.Head].Y - jointPoints[JointType.SpineBase].Y;
+            double lenghHipToHead = Math.Sqrt(deltaHipToHead_X * deltaHipToHead_X + deltaHipToHead_Y * deltaHipToHead_Y);
+            double degreeHipToHead = deltaHipToHead_Y / deltaHipToHead_X;
+            double degreeHipToHeadCos = deltaHipToHead_X / lenghHipToHead;
+
+            //脖子到头的连线的角度
+            double deltaNeckToHead_X = jointPoints[JointType.Head].X - jointPoints[JointType.Neck].X;
+            double deltaNeckToHead_Y = jointPoints[JointType.Head].Y - jointPoints[JointType.Neck].Y;
+            double lenghNeckToHead = Math.Sqrt(deltaNeckToHead_X * deltaNeckToHead_X + deltaNeckToHead_Y * deltaNeckToHead_Y);
+            double degreeNeckToHead = deltaNeckToHead_Y / deltaNeckToHead_X;
+            double degreeNeckToHeadCos = deltaNeckToHead_X / lenghNeckToHead;
+
+            bool checkAll = true;
+            float checkLimit = 0.6f;
+            // Draw the bones
+            foreach (var bone in this.bones)
+            {
+                if ((bone.Item1 == JointType.WristLeft && bone.Item2 == JointType.HandLeft)
+                    || (bone.Item1 == JointType.WristRight && bone.Item2 == JointType.HandRight)
+                    || (bone.Item1 == JointType.HandLeft && bone.Item2 == JointType.HandTipLeft)
+                    || (bone.Item1 == JointType.HandRight && bone.Item2 == JointType.HandTipRight)
+                    || (bone.Item1 == JointType.WristLeft && bone.Item2 == JointType.ThumbLeft)
+                    || (bone.Item1 == JointType.WristRight && bone.Item2 == JointType.ThumbRight))
+                {
+                    continue;
+                }
+                drawBrush = null;
+
+                Pen newPen = drawingPen;
+
+                double p = -1;
+                if (bone.Item1 == JointType.ShoulderLeft && bone.Item2 == JointType.ElbowLeft)
+                {
+                    p = Math.Abs(degreeLShoulderToLElbowCos - (Math.Cos(Math.PI * 0.5 + Math.PI * 0.15)));
+                    p = 1 - Math.Min(p, 1);
+                    p = deltaLShoulderToLElbow_Y > 0 ? p : 0;
+                    p = deltaLShoulderToLElbow_X < 0 ? p : 0;
+                    checkAll &= CheckBone((float)p, checkLimit, out drawBrush);
+                }
+                if (bone.Item1 == JointType.ElbowLeft && bone.Item2 == JointType.WristLeft)
+                {
+                    p = Math.Abs(degreeLElbowToLWristCos - (Math.Cos(-Math.PI * 0.1)));
+                    p = 1 - Math.Min(p, 1);
+                    p = deltaLElbowToLWrist_X > 0 ? p : 0;
+                    p = deltaLElbowToLWrist_Y < 0 ? p : 0;
+                    checkAll &= CheckBone((float)p, checkLimit, out drawBrush);
+                }
+
+                if (bone.Item1 == JointType.ShoulderRight && bone.Item2 == JointType.ElbowRight)
+                {
+                    p = Math.Abs(degreeRShoulderToRElbowCos - (Math.Cos(Math.PI * 0.25)));
+                    p = 1 - Math.Min(p, 1);
+                    p = deltaRShoulderToRElbow_X > 0 ? p : 0;
+                    p = deltaRShoulderToRElbow_Y > 0 ? p : 0;
+                    checkAll &= CheckBone((float)p, checkLimit, out drawBrush);
+                }
+                if (bone.Item1 == JointType.ElbowRight && bone.Item2 == JointType.WristRight)
+                {
+                    p = Math.Abs(degreeRElbowToRWristCos - (Math.Cos(Math.PI * 0.5 + Math.PI * 0.3)));
+                    p = 1 - Math.Min(p, 1);
+                    p = deltaRElbowToRWrist_X < 0 ? p : 0;
+                    checkAll &= CheckBone((float)p, checkLimit, out drawBrush);
+                }
+                if ((bone.Item1 == JointType.Head && bone.Item2 == JointType.Neck))
+                {
+                    //p = Math.Abs(degreeNeckToHeadCos - (Math.Cos(-Math.PI * 0.33)));
+                    //p = 1 - Math.Min(p, 1);
+                    //p = deltaNeckToHead_X > 0 ? p : 0;
+
+                    //checkAll &= CheckBone((float)p, checkLimit, out drawBrush);
+                }
+
+                if (p != -1)
+                    newPen = new Pen(drawBrush, 6);
+
+                this.DrawBone(joints, jointPoints, bone.Item1, bone.Item2, drawingContext, newPen);
+            }
+
+            return checkAll;
+        }
+
+        private bool DrawTargetBody_3(IReadOnlyDictionary<JointType, Joint> joints, IDictionary<JointType, Point> jointPoints, DrawingContext drawingContext, Pen drawingPen)
+        {
+
+            Brush drawBrush = new SolidColorBrush(Color.FromArgb(255, 255, 255, 255));
+
+            //左肩到左肘的连线
+            double deltaLShoulderToLElbow_X = jointPoints[JointType.ElbowLeft].X - jointPoints[JointType.ShoulderLeft].X;
+            double deltaLShoulderToLElbow_Y = jointPoints[JointType.ElbowLeft].Y - jointPoints[JointType.ShoulderLeft].Y;
+            double lenghLShoulderToLElbow = Math.Sqrt(deltaLShoulderToLElbow_X * deltaLShoulderToLElbow_X + deltaLShoulderToLElbow_Y * deltaLShoulderToLElbow_Y);
+            double degreeLShoulderToLElbow = deltaLShoulderToLElbow_Y / deltaLShoulderToLElbow_X;
+            double degreeLShoulderToLElbowCos = deltaLShoulderToLElbow_X / lenghLShoulderToLElbow;
+
+            //左肘到左腕的连线
+            double deltaLElbowToLWrist_X = jointPoints[JointType.WristLeft].X - jointPoints[JointType.ElbowLeft].X;
+            double deltaLElbowToLWrist_Y = jointPoints[JointType.WristLeft].Y - jointPoints[JointType.ElbowLeft].Y;
+            double lenghLElbowToLWrist = Math.Sqrt(deltaLElbowToLWrist_X * deltaLElbowToLWrist_X + deltaLElbowToLWrist_Y * deltaLElbowToLWrist_Y);
+            double degreeLElbowToLWrist = deltaLElbowToLWrist_Y / deltaLElbowToLWrist_X;
+            double degreeLElbowToLWristCos = deltaLElbowToLWrist_X / lenghLElbowToLWrist;
+
+
+            //右肩到右肘的连线
+            double deltaRShoulderToRElbow_X = jointPoints[JointType.ElbowRight].X - jointPoints[JointType.ShoulderRight].X;
+            double deltaRShoulderToRElbow_Y = jointPoints[JointType.ElbowRight].Y - jointPoints[JointType.ShoulderRight].Y;
+            double lenghRShoulderToRElbow = Math.Sqrt(deltaRShoulderToRElbow_X * deltaRShoulderToRElbow_X + deltaRShoulderToRElbow_Y * deltaRShoulderToRElbow_Y);
+            double degreeRShoulderToRElbow = deltaRShoulderToRElbow_Y / deltaRShoulderToRElbow_X;
+            double degreeRShoulderToRElbowCos = deltaRShoulderToRElbow_X / lenghRShoulderToRElbow;
+
+            //右肘到右腕的连线
+            double deltaRElbowToRWrist_X = jointPoints[JointType.WristRight].X - jointPoints[JointType.ElbowRight].X;
+            double deltaRElbowToRWrist_Y = jointPoints[JointType.WristRight].Y - jointPoints[JointType.ElbowRight].Y;
+            double lenghRElbowToRWrist = Math.Sqrt(deltaRElbowToRWrist_X * deltaRElbowToRWrist_X + deltaRElbowToRWrist_Y * deltaRElbowToRWrist_Y);
+            double degreeRElbowToRWrist = deltaRElbowToRWrist_Y / deltaRElbowToRWrist_X;
+            double degreeRElbowToRWristCos = deltaRElbowToRWrist_X / lenghRElbowToRWrist;
+
+            //腰到头的连线的角度
+            double deltaHipToHead_X = jointPoints[JointType.Head].X - jointPoints[JointType.SpineBase].X;
+            double deltaHipToHead_Y = jointPoints[JointType.Head].Y - jointPoints[JointType.SpineBase].Y;
+            double lenghHipToHead = Math.Sqrt(deltaHipToHead_X * deltaHipToHead_X + deltaHipToHead_Y * deltaHipToHead_Y);
+            double degreeHipToHead = deltaHipToHead_Y / deltaHipToHead_X;
+            double degreeHipToHeadCos = deltaHipToHead_X / lenghHipToHead;
+
+            //脖子到头的连线的角度
+            double deltaNeckToHead_X = jointPoints[JointType.Head].X - jointPoints[JointType.Neck].X;
+            double deltaNeckToHead_Y = jointPoints[JointType.Head].Y - jointPoints[JointType.Neck].Y;
+            double lenghNeckToHead = Math.Sqrt(deltaNeckToHead_X * deltaNeckToHead_X + deltaNeckToHead_Y * deltaNeckToHead_Y);
+            double degreeNeckToHead = deltaNeckToHead_Y / deltaNeckToHead_X;
+            double degreeNeckToHeadCos = deltaNeckToHead_X / lenghNeckToHead;
+
+            bool checkAll = true;
+            float checkLimit = 0.5f;
+            // Draw the bones
+            foreach (var bone in this.bones)
+            {
+                if ((bone.Item1 == JointType.WristLeft && bone.Item2 == JointType.HandLeft)
+                    || (bone.Item1 == JointType.WristRight && bone.Item2 == JointType.HandRight)
+                    || (bone.Item1 == JointType.HandLeft && bone.Item2 == JointType.HandTipLeft)
+                    || (bone.Item1 == JointType.HandRight && bone.Item2 == JointType.HandTipRight)
+                    || (bone.Item1 == JointType.WristLeft && bone.Item2 == JointType.ThumbLeft)
+                    || (bone.Item1 == JointType.WristRight && bone.Item2 == JointType.ThumbRight))
+                {
+                    continue;
+                }
+                drawBrush = null;
+
+                Pen newPen = drawingPen;
+
+                double p = -1;
+                if (bone.Item1 == JointType.ShoulderLeft && bone.Item2 == JointType.ElbowLeft)
+                {
+                    p = Math.Abs(degreeLShoulderToLElbowCos - (Math.Cos( Math.PI * 0.35)));
+                    p = 1 - Math.Min(p, 1);
+                    p = deltaLShoulderToLElbow_Y > 0 ? p : 0;
+                    p = deltaLShoulderToLElbow_X > 0 ? p : 0;
+                    checkAll &= CheckBone((float)p, checkLimit, out drawBrush);
+                }
+                if (bone.Item1 == JointType.ElbowLeft && bone.Item2 == JointType.WristLeft)
+                {
+                    p = Math.Abs(degreeLElbowToLWristCos - (Math.Cos(Math.PI * 0.1)));
+                    p = 1 - Math.Min(p, 1);
+                    p = deltaLElbowToLWrist_X > 0 ? p : 0;
+
+                    checkAll &= CheckBone((float)p, checkLimit, out drawBrush);
+                }
+
+                if (bone.Item1 == JointType.ShoulderRight && bone.Item2 == JointType.ElbowRight)
+                {
+                    p = Math.Abs(degreeRShoulderToRElbowCos - (Math.Cos(Math.PI * 0.2)));
+                    p = 1 - Math.Min(p, 1);
+                    p = deltaRShoulderToRElbow_X > 0 ? p : 0;
+                    checkAll &= CheckBone((float)p, checkLimit, out drawBrush);
+                }
+                if (bone.Item1 == JointType.ElbowRight && bone.Item2 == JointType.WristRight)
+                {
+                    p = Math.Abs(degreeRElbowToRWristCos - (Math.Cos(Math.PI * 0.45)));
+                    p = 1 - Math.Min(p, 1);
+                    p = deltaRElbowToRWrist_X > 0 ? p : 0;
+                    p = deltaRElbowToRWrist_Y > 0 ? p : 0;
+                    checkAll &= CheckBone((float)p, checkLimit, out drawBrush);
+                }
+                if ((bone.Item1 == JointType.Head && bone.Item2 == JointType.Neck) ||
+                    (bone.Item1 == JointType.Neck && bone.Item2 == JointType.SpineShoulder) ||
+                    (bone.Item1 == JointType.SpineShoulder && bone.Item2 == JointType.SpineMid) ||
+                    (bone.Item1 == JointType.SpineMid && bone.Item2 == JointType.SpineBase))
+                {
+                    //p = Math.Abs(degreeHipToHeadCos - (Math.Cos(-Math.PI * 0.35)));
+                    //p = 1 - Math.Min(p, 1);
+                    //p = deltaHipToHead_X > 0 ? p : 0;
+
+                    //checkAll &= CheckBone((float)p, checkLimit, out drawBrush);
+                }
+
+                if (p != -1)
+                    newPen = new Pen(drawBrush, 6);
+
+                this.DrawBone(joints, jointPoints, bone.Item1, bone.Item2, drawingContext, newPen);
+            }
+
+            return checkAll;
+        }
+
+        private bool DrawTargetBody_4(IReadOnlyDictionary<JointType, Joint> joints, IDictionary<JointType, Point> jointPoints, DrawingContext drawingContext, Pen drawingPen)
+        {
+
+            Brush drawBrush = new SolidColorBrush(Color.FromArgb(255, 255, 255, 255));
+
+            //左肩到左肘的连线
+            double deltaLShoulderToLElbow_X = jointPoints[JointType.ElbowLeft].X - jointPoints[JointType.ShoulderLeft].X;
+            double deltaLShoulderToLElbow_Y = jointPoints[JointType.ElbowLeft].Y - jointPoints[JointType.ShoulderLeft].Y;
+            double lenghLShoulderToLElbow = Math.Sqrt(deltaLShoulderToLElbow_X * deltaLShoulderToLElbow_X + deltaLShoulderToLElbow_Y * deltaLShoulderToLElbow_Y);
+            double degreeLShoulderToLElbow = deltaLShoulderToLElbow_Y / deltaLShoulderToLElbow_X;
+            double degreeLShoulderToLElbowCos = deltaLShoulderToLElbow_X / lenghLShoulderToLElbow;
+
+            //左肘到左腕的连线
+            double deltaLElbowToLWrist_X = jointPoints[JointType.WristLeft].X - jointPoints[JointType.ElbowLeft].X;
+            double deltaLElbowToLWrist_Y = jointPoints[JointType.WristLeft].Y - jointPoints[JointType.ElbowLeft].Y;
+            double lenghLElbowToLWrist = Math.Sqrt(deltaLElbowToLWrist_X * deltaLElbowToLWrist_X + deltaLElbowToLWrist_Y * deltaLElbowToLWrist_Y);
+            double degreeLElbowToLWrist = deltaLElbowToLWrist_Y / deltaLElbowToLWrist_X;
+            double degreeLElbowToLWristCos = deltaLElbowToLWrist_X / lenghLElbowToLWrist;
+
+
+            //右肩到右肘的连线
+            double deltaRShoulderToRElbow_X = jointPoints[JointType.ElbowRight].X - jointPoints[JointType.ShoulderRight].X;
+            double deltaRShoulderToRElbow_Y = jointPoints[JointType.ElbowRight].Y - jointPoints[JointType.ShoulderRight].Y;
+            double lenghRShoulderToRElbow = Math.Sqrt(deltaRShoulderToRElbow_X * deltaRShoulderToRElbow_X + deltaRShoulderToRElbow_Y * deltaRShoulderToRElbow_Y);
+            double degreeRShoulderToRElbow = deltaRShoulderToRElbow_Y / deltaRShoulderToRElbow_X;
+            double degreeRShoulderToRElbowCos = deltaRShoulderToRElbow_X / lenghRShoulderToRElbow;
+
+            //右肘到右腕的连线
+            double deltaRElbowToRWrist_X = jointPoints[JointType.WristRight].X - jointPoints[JointType.ElbowRight].X;
+            double deltaRElbowToRWrist_Y = jointPoints[JointType.WristRight].Y - jointPoints[JointType.ElbowRight].Y;
+            double lenghRElbowToRWrist = Math.Sqrt(deltaRElbowToRWrist_X * deltaRElbowToRWrist_X + deltaRElbowToRWrist_Y * deltaRElbowToRWrist_Y);
+            double degreeRElbowToRWrist = deltaRElbowToRWrist_Y / deltaRElbowToRWrist_X;
+            double degreeRElbowToRWristCos = deltaRElbowToRWrist_X / lenghRElbowToRWrist;
+
+            //腰到头的连线的角度
+            double deltaHipToHead_X = jointPoints[JointType.Head].X - jointPoints[JointType.SpineBase].X;
+            double deltaHipToHead_Y = jointPoints[JointType.Head].Y - jointPoints[JointType.SpineBase].Y;
+            double lenghHipToHead = Math.Sqrt(deltaHipToHead_X * deltaHipToHead_X + deltaHipToHead_Y * deltaHipToHead_Y);
+            double degreeHipToHead = deltaHipToHead_Y / deltaHipToHead_X;
+            double degreeHipToHeadCos = deltaHipToHead_X / lenghHipToHead;
+
+            //腰子到头的连线的角度
+            double deltaHipToNeck_X = jointPoints[JointType.Head].X - jointPoints[JointType.SpineBase].X;
+            double deltaHipToNeck_Y = jointPoints[JointType.Head].Y - jointPoints[JointType.SpineBase].Y;
+            double lenghHipToNeck = Math.Sqrt(deltaHipToNeck_X * deltaHipToNeck_X + deltaHipToNeck_Y * deltaHipToNeck_Y);
+            double degreeHipToNeck = deltaHipToNeck_Y / deltaHipToNeck_X;
+            double degreeHipToNeckCos = deltaHipToNeck_X / lenghHipToNeck;
+
+
+            //脖子到头的连线的角度
+            double deltaNeckToHead_X = jointPoints[JointType.Head].X - jointPoints[JointType.Neck].X;
+            double deltaNeckToHead_Y = jointPoints[JointType.Head].Y - jointPoints[JointType.Neck].Y;
+            double lenghNeckToHead = Math.Sqrt(deltaNeckToHead_X * deltaNeckToHead_X + deltaNeckToHead_Y * deltaNeckToHead_Y);
+            double degreeNeckToHead = deltaNeckToHead_Y / deltaNeckToHead_X;
+            double degreeNeckToHeadCos = deltaNeckToHead_X / lenghNeckToHead;
+
+            bool checkAll = true;
+            float checkLimit = 0.5f;
+            // Draw the bones
+            foreach (var bone in this.bones)
+            {
+                if ((bone.Item1 == JointType.WristLeft && bone.Item2 == JointType.HandLeft)
+                    || (bone.Item1 == JointType.WristRight && bone.Item2 == JointType.HandRight)
+                    || (bone.Item1 == JointType.HandLeft && bone.Item2 == JointType.HandTipLeft)
+                    || (bone.Item1 == JointType.HandRight && bone.Item2 == JointType.HandTipRight)
+                    || (bone.Item1 == JointType.WristLeft && bone.Item2 == JointType.ThumbLeft)
+                    || (bone.Item1 == JointType.WristRight && bone.Item2 == JointType.ThumbRight))
+                {
+                    continue;
+                }
+                drawBrush = null;
+
+                Pen newPen = drawingPen;
+
+                double p = -1;
+                if (bone.Item1 == JointType.ShoulderLeft && bone.Item2 == JointType.ElbowLeft)
+                {
+                    p = Math.Abs(degreeLShoulderToLElbowCos - (Math.Cos(Math.PI * 0.65)));
+                    p = 1 - Math.Min(p, 1);
+                    p = deltaLShoulderToLElbow_Y > 0 ? p : 0;
+                    p = deltaLShoulderToLElbow_X < 0 ? p : 0;
+                    checkAll &= CheckBone((float)p, checkLimit, out drawBrush);
+                }
+                if (bone.Item1 == JointType.ElbowLeft && bone.Item2 == JointType.WristLeft)
+                {
+                    p = Math.Abs(degreeLElbowToLWristCos - (Math.Cos(-Math.PI * 0.55)));
+                    p = 1 - Math.Min(p, 1);
+                    p = deltaLElbowToLWrist_Y < 0 ? p : 0;
+                    p = deltaLElbowToLWrist_X < 0 ? p : 0;
+                    checkAll &= CheckBone((float)p, checkLimit, out drawBrush);
+                }
+
+                if (bone.Item1 == JointType.ShoulderRight && bone.Item2 == JointType.ElbowRight)
+                {
+                    p = Math.Abs(degreeRShoulderToRElbowCos - (Math.Cos(Math.PI * 0.25)));
+                    p = 1 - Math.Min(p, 1);
+                    p = deltaRShoulderToRElbow_Y > 0 ? p : 0;
+                    p = deltaRShoulderToRElbow_X > 0 ? p : 0;
+                    checkAll &= CheckBone((float)p, checkLimit, out drawBrush);
+                }
+                if (bone.Item1 == JointType.ElbowRight && bone.Item2 == JointType.WristRight)
+                {
+                    p = Math.Abs(degreeRElbowToRWristCos - (Math.Cos(Math.PI * 0.5 + Math.PI * 0.1)));
+                    p = 1 - Math.Min(p, 1);
+                    p = deltaRElbowToRWrist_Y > 0 ? p : 0;
+                    p = deltaRElbowToRWrist_X < 0 ? p : 0;
+                    checkAll &= CheckBone((float)p, checkLimit, out drawBrush);
+                }
+                if ((bone.Item1 == JointType.Head && bone.Item2 == JointType.Neck))
+                {
+                    //p = Math.Abs(degreeNeckToHeadCos - (Math.Cos(-Math.PI * 0.5)));
+                    //p = 1 - Math.Min(p, 1);
+                    //p = deltaNeckToHead_Y < 0 ? p : 0;
+
+                    //checkAll &= CheckBone((float)p, checkLimit, out drawBrush);
+                }
+                if ((bone.Item1 == JointType.Neck && bone.Item2 == JointType.SpineShoulder) ||
+                    (bone.Item1 == JointType.SpineShoulder && bone.Item2 == JointType.SpineMid) ||
+                    (bone.Item1 == JointType.SpineMid && bone.Item2 == JointType.SpineBase))
+                {
+                    //p = Math.Abs(degreeHipToNeckCos - (Math.Cos(Math.PI + Math.PI * 0.45)));
+                    //p = 1 - Math.Min(p, 1);
+                    //p = deltaHipToNeck_Y < 0 ? p : 0;
+
+                    //checkAll &= CheckBone((float)p, checkLimit, out drawBrush);
+                }
+                if (p != -1)
+                    newPen = new Pen(drawBrush, 6);
+
+                this.DrawBone(joints, jointPoints, bone.Item1, bone.Item2, drawingContext, newPen);
+            }
+
+            return checkAll;
+        }
+
+        private bool DrawTargetBody_5(IReadOnlyDictionary<JointType, Joint> joints, IDictionary<JointType, Point> jointPoints, DrawingContext drawingContext, Pen drawingPen)
+        {
+
+            Brush drawBrush = new SolidColorBrush(Color.FromArgb(255, 255, 255, 255));
+
+            //左肩到左肘的连线
+            double deltaLShoulderToLElbow_X = jointPoints[JointType.ElbowLeft].X - jointPoints[JointType.ShoulderLeft].X;
+            double deltaLShoulderToLElbow_Y = jointPoints[JointType.ElbowLeft].Y - jointPoints[JointType.ShoulderLeft].Y;
+            double lenghLShoulderToLElbow = Math.Sqrt(deltaLShoulderToLElbow_X * deltaLShoulderToLElbow_X + deltaLShoulderToLElbow_Y * deltaLShoulderToLElbow_Y);
+            double degreeLShoulderToLElbow = deltaLShoulderToLElbow_Y / deltaLShoulderToLElbow_X;
+            double degreeLShoulderToLElbowCos = deltaLShoulderToLElbow_X / lenghLShoulderToLElbow;
+
+            //左肘到左腕的连线
+            double deltaLElbowToLWrist_X = jointPoints[JointType.WristLeft].X - jointPoints[JointType.ElbowLeft].X;
+            double deltaLElbowToLWrist_Y = jointPoints[JointType.WristLeft].Y - jointPoints[JointType.ElbowLeft].Y;
+            double lenghLElbowToLWrist = Math.Sqrt(deltaLElbowToLWrist_X * deltaLElbowToLWrist_X + deltaLElbowToLWrist_Y * deltaLElbowToLWrist_Y);
+            double degreeLElbowToLWrist = deltaLElbowToLWrist_Y / deltaLElbowToLWrist_X;
+            double degreeLElbowToLWristCos = deltaLElbowToLWrist_X / lenghLElbowToLWrist;
+
+
+            //右肩到右肘的连线
+            double deltaRShoulderToRElbow_X = jointPoints[JointType.ElbowRight].X - jointPoints[JointType.ShoulderRight].X;
+            double deltaRShoulderToRElbow_Y = jointPoints[JointType.ElbowRight].Y - jointPoints[JointType.ShoulderRight].Y;
+            double lenghRShoulderToRElbow = Math.Sqrt(deltaRShoulderToRElbow_X * deltaRShoulderToRElbow_X + deltaRShoulderToRElbow_Y * deltaRShoulderToRElbow_Y);
+            double degreeRShoulderToRElbow = deltaRShoulderToRElbow_Y / deltaRShoulderToRElbow_X;
+            double degreeRShoulderToRElbowCos = deltaRShoulderToRElbow_X / lenghRShoulderToRElbow;
+
+            //右肘到右腕的连线
+            double deltaRElbowToRWrist_X = jointPoints[JointType.WristRight].X - jointPoints[JointType.ElbowRight].X;
+            double deltaRElbowToRWrist_Y = jointPoints[JointType.WristRight].Y - jointPoints[JointType.ElbowRight].Y;
+            double lenghRElbowToRWrist = Math.Sqrt(deltaRElbowToRWrist_X * deltaRElbowToRWrist_X + deltaRElbowToRWrist_Y * deltaRElbowToRWrist_Y);
+            double degreeRElbowToRWrist = deltaRElbowToRWrist_Y / deltaRElbowToRWrist_X;
+            double degreeRElbowToRWristCos = deltaRElbowToRWrist_X / lenghRElbowToRWrist;
+
+            //腰到头的连线的角度
+            double deltaHipToHead_X = jointPoints[JointType.Head].X - jointPoints[JointType.SpineBase].X;
+            double deltaHipToHead_Y = jointPoints[JointType.Head].Y - jointPoints[JointType.SpineBase].Y;
+            double lenghHipToHead = Math.Sqrt(deltaHipToHead_X * deltaHipToHead_X + deltaHipToHead_Y * deltaHipToHead_Y);
+            double degreeHipToHead = deltaHipToHead_Y / deltaHipToHead_X;
+            double degreeHipToHeadCos = deltaHipToHead_X / lenghHipToHead;
+
+            //腰子到头的连线的角度
+            double deltaHipToNeck_X = jointPoints[JointType.Head].X - jointPoints[JointType.SpineBase].X;
+            double deltaHipToNeck_Y = jointPoints[JointType.Head].Y - jointPoints[JointType.SpineBase].Y;
+            double lenghHipToNeck = Math.Sqrt(deltaHipToNeck_X * deltaHipToNeck_X + deltaHipToNeck_Y * deltaHipToNeck_Y);
+            double degreeHipToNeck = deltaHipToNeck_Y / deltaHipToNeck_X;
+            double degreeHipToNeckCos = deltaHipToNeck_X / lenghHipToNeck;
+
+
+            //脖子到头的连线的角度
+            double deltaNeckToHead_X = jointPoints[JointType.Head].X - jointPoints[JointType.Neck].X;
+            double deltaNeckToHead_Y = jointPoints[JointType.Head].Y - jointPoints[JointType.Neck].Y;
+            double lenghNeckToHead = Math.Sqrt(deltaNeckToHead_X * deltaNeckToHead_X + deltaNeckToHead_Y * deltaNeckToHead_Y);
+            double degreeNeckToHead = deltaNeckToHead_Y / deltaNeckToHead_X;
+            double degreeNeckToHeadCos = deltaNeckToHead_X / lenghNeckToHead;
+
+            bool checkAll = true;
+            float checkLimit = 0.5f;
+            // Draw the bones
+            foreach (var bone in this.bones)
+            {
+                if ((bone.Item1 == JointType.WristLeft && bone.Item2 == JointType.HandLeft)
+                    || (bone.Item1 == JointType.WristRight && bone.Item2 == JointType.HandRight)
+                    || (bone.Item1 == JointType.HandLeft && bone.Item2 == JointType.HandTipLeft)
+                    || (bone.Item1 == JointType.HandRight && bone.Item2 == JointType.HandTipRight)
+                    || (bone.Item1 == JointType.WristLeft && bone.Item2 == JointType.ThumbLeft)
+                    || (bone.Item1 == JointType.WristRight && bone.Item2 == JointType.ThumbRight))
+                {
+                    continue;
+                }
+                drawBrush = null;
+
+                Pen newPen = drawingPen;
+
+                double p = -1;
+                if (bone.Item1 == JointType.ShoulderLeft && bone.Item2 == JointType.ElbowLeft)
+                {
+                    p = Math.Abs(degreeLShoulderToLElbowCos - (Math.Cos(Math.PI * 0.5 + Math.PI * 0.2)));
+                    p = 1 - Math.Min(p, 1);
+                    p = deltaLShoulderToLElbow_Y > 0 ? p : 0;
+                    p = deltaLShoulderToLElbow_X < 0 ? p : 0;
+                    checkAll &= CheckBone((float)p, checkLimit, out drawBrush);
+                }
+                if (bone.Item1 == JointType.ElbowLeft && bone.Item2 == JointType.WristLeft)
+                {
+                    p = Math.Abs(degreeLElbowToLWristCos - (Math.Cos(Math.PI * 0.25)));
+                    p = 1 - Math.Min(p, 1);
+                    p = deltaLElbowToLWrist_Y > 0 ? p : 0;
+                    p = deltaLElbowToLWrist_X > 0 ? p : 0;
+
+                    checkAll &= CheckBone((float)p, checkLimit, out drawBrush);
+                }
+
+                if (bone.Item1 == JointType.ShoulderRight && bone.Item2 == JointType.ElbowRight)
+                {
+                    p = Math.Abs(degreeRShoulderToRElbowCos - (Math.Cos(-Math.PI * 0.25)));
+                    p = 1 - Math.Min(p, 1);
+                    p = deltaRShoulderToRElbow_Y < 0 ? p : 0;
+                    p = deltaRShoulderToRElbow_X > 0 ? p : 0;
+                    checkAll &= CheckBone((float)p, checkLimit, out drawBrush);
+                }
+                if (bone.Item1 == JointType.ElbowRight && bone.Item2 == JointType.WristRight)
+                {
+                    p = Math.Abs(degreeRElbowToRWristCos - (Math.Cos(-Math.PI * 0.5)));
+                    p = 1 - Math.Min(p, 1);
+                    p = deltaRElbowToRWrist_Y < 0 ? p : 0;
+
+                    checkAll &= CheckBone((float)p, checkLimit, out drawBrush);
+                }
+                if ((bone.Item1 == JointType.Head && bone.Item2 == JointType.Neck))
+                {
+                    //p = Math.Abs(degreeNeckToHeadCos - (Math.Cos(-Math.PI * 0.5)));
+                    //p = 1 - Math.Min(p, 1);
+                    //p = deltaNeckToHead_Y < 0 ? p : 0;
+
+                    //checkAll &= CheckBone((float)p, checkLimit, out drawBrush);
+                }
+                if ((bone.Item1 == JointType.Neck && bone.Item2 == JointType.SpineShoulder) ||
+                    (bone.Item1 == JointType.SpineShoulder && bone.Item2 == JointType.SpineMid) ||
+                    (bone.Item1 == JointType.SpineMid && bone.Item2 == JointType.SpineBase))
+                {
+                    //p = Math.Abs(degreeHipToNeckCos - (Math.Cos(Math.PI + Math.PI * 0.45)));
+                    //p = 1 - Math.Min(p, 1);
+                    //p = deltaHipToNeck_Y < 0 ? p : 0;
+
+                    //checkAll &= CheckBone((float)p, checkLimit, out drawBrush);
+                }
+                if (p != -1)
+                    newPen = new Pen(drawBrush, 6);
+
+                this.DrawBone(joints, jointPoints, bone.Item1, bone.Item2, drawingContext, newPen);
+            }
+
+            return checkAll;
+        }
+
+        private bool DrawTargetBody_6(IReadOnlyDictionary<JointType, Joint> joints, IDictionary<JointType, Point> jointPoints, DrawingContext drawingContext, Pen drawingPen)
+        {
+
+            Brush drawBrush = new SolidColorBrush(Color.FromArgb(255, 255, 255, 255));
+
+            //左肩到左肘的连线
+            double deltaLShoulderToLElbow_X = jointPoints[JointType.ElbowLeft].X - jointPoints[JointType.ShoulderLeft].X;
+            double deltaLShoulderToLElbow_Y = jointPoints[JointType.ElbowLeft].Y - jointPoints[JointType.ShoulderLeft].Y;
+            double lenghLShoulderToLElbow = Math.Sqrt(deltaLShoulderToLElbow_X * deltaLShoulderToLElbow_X + deltaLShoulderToLElbow_Y * deltaLShoulderToLElbow_Y);
+            double degreeLShoulderToLElbow = deltaLShoulderToLElbow_Y / deltaLShoulderToLElbow_X;
+            double degreeLShoulderToLElbowCos = deltaLShoulderToLElbow_X / lenghLShoulderToLElbow;
+
+            //左肘到左腕的连线
+            double deltaLElbowToLWrist_X = jointPoints[JointType.WristLeft].X - jointPoints[JointType.ElbowLeft].X;
+            double deltaLElbowToLWrist_Y = jointPoints[JointType.WristLeft].Y - jointPoints[JointType.ElbowLeft].Y;
+            double lenghLElbowToLWrist = Math.Sqrt(deltaLElbowToLWrist_X * deltaLElbowToLWrist_X + deltaLElbowToLWrist_Y * deltaLElbowToLWrist_Y);
+            double degreeLElbowToLWrist = deltaLElbowToLWrist_Y / deltaLElbowToLWrist_X;
+            double degreeLElbowToLWristCos = deltaLElbowToLWrist_X / lenghLElbowToLWrist;
+
+
+            //右肩到右肘的连线
+            double deltaRShoulderToRElbow_X = jointPoints[JointType.ElbowRight].X - jointPoints[JointType.ShoulderRight].X;
+            double deltaRShoulderToRElbow_Y = jointPoints[JointType.ElbowRight].Y - jointPoints[JointType.ShoulderRight].Y;
+            double lenghRShoulderToRElbow = Math.Sqrt(deltaRShoulderToRElbow_X * deltaRShoulderToRElbow_X + deltaRShoulderToRElbow_Y * deltaRShoulderToRElbow_Y);
+            double degreeRShoulderToRElbow = deltaRShoulderToRElbow_Y / deltaRShoulderToRElbow_X;
+            double degreeRShoulderToRElbowCos = deltaRShoulderToRElbow_X / lenghRShoulderToRElbow;
+
+            //右肘到右腕的连线
+            double deltaRElbowToRWrist_X = jointPoints[JointType.WristRight].X - jointPoints[JointType.ElbowRight].X;
+            double deltaRElbowToRWrist_Y = jointPoints[JointType.WristRight].Y - jointPoints[JointType.ElbowRight].Y;
+            double lenghRElbowToRWrist = Math.Sqrt(deltaRElbowToRWrist_X * deltaRElbowToRWrist_X + deltaRElbowToRWrist_Y * deltaRElbowToRWrist_Y);
+            double degreeRElbowToRWrist = deltaRElbowToRWrist_Y / deltaRElbowToRWrist_X;
+            double degreeRElbowToRWristCos = deltaRElbowToRWrist_X / lenghRElbowToRWrist;
+
+            //腰到头的连线的角度
+            double deltaHipToHead_X = jointPoints[JointType.Head].X - jointPoints[JointType.SpineBase].X;
+            double deltaHipToHead_Y = jointPoints[JointType.Head].Y - jointPoints[JointType.SpineBase].Y;
+            double lenghHipToHead = Math.Sqrt(deltaHipToHead_X * deltaHipToHead_X + deltaHipToHead_Y * deltaHipToHead_Y);
+            double degreeHipToHead = deltaHipToHead_Y / deltaHipToHead_X;
+            double degreeHipToHeadCos = deltaHipToHead_X / lenghHipToHead;
+
+            //腰子到头的连线的角度
+            double deltaHipToNeck_X = jointPoints[JointType.Head].X - jointPoints[JointType.SpineBase].X;
+            double deltaHipToNeck_Y = jointPoints[JointType.Head].Y - jointPoints[JointType.SpineBase].Y;
+            double lenghHipToNeck = Math.Sqrt(deltaHipToNeck_X * deltaHipToNeck_X + deltaHipToNeck_Y * deltaHipToNeck_Y);
+            double degreeHipToNeck = deltaHipToNeck_Y / deltaHipToNeck_X;
+            double degreeHipToNeckCos = deltaHipToNeck_X / lenghHipToNeck;
+
+
+            //脖子到头的连线的角度
+            double deltaNeckToHead_X = jointPoints[JointType.Head].X - jointPoints[JointType.Neck].X;
+            double deltaNeckToHead_Y = jointPoints[JointType.Head].Y - jointPoints[JointType.Neck].Y;
+            double lenghNeckToHead = Math.Sqrt(deltaNeckToHead_X * deltaNeckToHead_X + deltaNeckToHead_Y * deltaNeckToHead_Y);
+            double degreeNeckToHead = deltaNeckToHead_Y / deltaNeckToHead_X;
+            double degreeNeckToHeadCos = deltaNeckToHead_X / lenghNeckToHead;
+
+            bool checkAll = true;
+            float checkLimit = 0.5f;
+            // Draw the bones
+            foreach (var bone in this.bones)
+            {
+                if ((bone.Item1 == JointType.WristLeft && bone.Item2 == JointType.HandLeft)
+                    || (bone.Item1 == JointType.WristRight && bone.Item2 == JointType.HandRight)
+                    || (bone.Item1 == JointType.HandLeft && bone.Item2 == JointType.HandTipLeft)
+                    || (bone.Item1 == JointType.HandRight && bone.Item2 == JointType.HandTipRight)
+                    || (bone.Item1 == JointType.WristLeft && bone.Item2 == JointType.ThumbLeft)
+                    || (bone.Item1 == JointType.WristRight && bone.Item2 == JointType.ThumbRight))
+                {
+                    continue;
+                }
+                drawBrush = null;
+
+                Pen newPen = drawingPen;
+
+                double p = -1;
+                if (bone.Item1 == JointType.ShoulderLeft && bone.Item2 == JointType.ElbowLeft)
+                {
+                    p = Math.Abs(degreeLShoulderToLElbowCos - (Math.Cos(Math.PI * 0.65)));
+                    p = 1 - Math.Min(p, 1);
+                    p = deltaLShoulderToLElbow_Y > 0 ? p : 0;
+                    p = deltaLShoulderToLElbow_X < 0 ? p : 0;
+                    checkAll &= CheckBone((float)p, checkLimit, out drawBrush);
+                }
+                if (bone.Item1 == JointType.ElbowLeft && bone.Item2 == JointType.WristLeft)
+                {
+                    p = Math.Abs(degreeLElbowToLWristCos - (Math.Cos(-Math.PI * 0.55)));
+                    p = 1 - Math.Min(p, 1);
+                    p = deltaLElbowToLWrist_Y < 0 ? p : 0;
+                    checkAll &= CheckBone((float)p, checkLimit, out drawBrush);
+                }
+
+                if (bone.Item1 == JointType.ShoulderRight && bone.Item2 == JointType.ElbowRight)
+                {
+                    p = Math.Abs(degreeRShoulderToRElbowCos - (Math.Cos(-Math.PI * 0.25)));
+                    p = 1 - Math.Min(p, 1);
+                    p = deltaRShoulderToRElbow_Y < 0 ? p : 0;
+                    p = deltaRShoulderToRElbow_X > 0 ? p : 0;
+                    checkAll &= CheckBone((float)p, checkLimit, out drawBrush);
+                }
+                if (bone.Item1 == JointType.ElbowRight && bone.Item2 == JointType.WristRight)
+                {
+                    p = Math.Abs(degreeRElbowToRWristCos - (Math.Cos(-Math.PI * 0.5)));
+                    p = 1 - Math.Min(p, 1);
+                    p = deltaRElbowToRWrist_Y < 0 ? p : 0;
+
+                    checkAll &= CheckBone((float)p, checkLimit, out drawBrush);
+                }
+                if ((bone.Item1 == JointType.Head && bone.Item2 == JointType.Neck))
+                {
+                    //p = Math.Abs(degreeNeckToHeadCos - (Math.Cos(-Math.PI * 0.5)));
+                    //p = 1 - Math.Min(p, 1);
+                    //p = deltaNeckToHead_Y < 0 ? p : 0;
+
+                    //checkAll &= CheckBone((float)p, checkLimit, out drawBrush);
+                }
+                if ((bone.Item1 == JointType.Neck && bone.Item2 == JointType.SpineShoulder) ||
+                    (bone.Item1 == JointType.SpineShoulder && bone.Item2 == JointType.SpineMid) ||
+                    (bone.Item1 == JointType.SpineMid && bone.Item2 == JointType.SpineBase))
+                {
+                    //p = Math.Abs(degreeHipToNeckCos - (Math.Cos(Math.PI + Math.PI * 0.45)));
+                    //p = 1 - Math.Min(p, 1);
+                    //p = deltaHipToNeck_Y < 0 ? p : 0;
+
+                    //checkAll &= CheckBone((float)p, checkLimit, out drawBrush);
+                }
+                if (p != -1)
+                    newPen = new Pen(drawBrush, 6);
+
+                this.DrawBone(joints, jointPoints, bone.Item1, bone.Item2, drawingContext, newPen);
+            }
+
+            return checkAll;
+        }
+
+        private bool DrawTargetBody_7(IReadOnlyDictionary<JointType, Joint> joints, IDictionary<JointType, Point> jointPoints, DrawingContext drawingContext, Pen drawingPen)
+        {
+
+            Brush drawBrush = new SolidColorBrush(Color.FromArgb(255, 255, 255, 255));
+
+            //左肩到左肘的连线
+            double deltaLShoulderToLElbow_X = jointPoints[JointType.ElbowLeft].X - jointPoints[JointType.ShoulderLeft].X;
+            double deltaLShoulderToLElbow_Y = jointPoints[JointType.ElbowLeft].Y - jointPoints[JointType.ShoulderLeft].Y;
+            double lenghLShoulderToLElbow = Math.Sqrt(deltaLShoulderToLElbow_X * deltaLShoulderToLElbow_X + deltaLShoulderToLElbow_Y * deltaLShoulderToLElbow_Y);
+            double degreeLShoulderToLElbow = deltaLShoulderToLElbow_Y / deltaLShoulderToLElbow_X;
+            double degreeLShoulderToLElbowCos = deltaLShoulderToLElbow_X / lenghLShoulderToLElbow;
+
+            //左肘到左腕的连线
+            double deltaLElbowToLWrist_X = jointPoints[JointType.WristLeft].X - jointPoints[JointType.ElbowLeft].X;
+            double deltaLElbowToLWrist_Y = jointPoints[JointType.WristLeft].Y - jointPoints[JointType.ElbowLeft].Y;
+            double lenghLElbowToLWrist = Math.Sqrt(deltaLElbowToLWrist_X * deltaLElbowToLWrist_X + deltaLElbowToLWrist_Y * deltaLElbowToLWrist_Y);
+            double degreeLElbowToLWrist = deltaLElbowToLWrist_Y / deltaLElbowToLWrist_X;
+            double degreeLElbowToLWristCos = deltaLElbowToLWrist_X / lenghLElbowToLWrist;
+
+
+            //右肩到右肘的连线
+            double deltaRShoulderToRElbow_X = jointPoints[JointType.ElbowRight].X - jointPoints[JointType.ShoulderRight].X;
+            double deltaRShoulderToRElbow_Y = jointPoints[JointType.ElbowRight].Y - jointPoints[JointType.ShoulderRight].Y;
+            double lenghRShoulderToRElbow = Math.Sqrt(deltaRShoulderToRElbow_X * deltaRShoulderToRElbow_X + deltaRShoulderToRElbow_Y * deltaRShoulderToRElbow_Y);
+            double degreeRShoulderToRElbow = deltaRShoulderToRElbow_Y / deltaRShoulderToRElbow_X;
+            double degreeRShoulderToRElbowCos = deltaRShoulderToRElbow_X / lenghRShoulderToRElbow;
+
+            //右肘到右腕的连线
+            double deltaRElbowToRWrist_X = jointPoints[JointType.WristRight].X - jointPoints[JointType.ElbowRight].X;
+            double deltaRElbowToRWrist_Y = jointPoints[JointType.WristRight].Y - jointPoints[JointType.ElbowRight].Y;
+            double lenghRElbowToRWrist = Math.Sqrt(deltaRElbowToRWrist_X * deltaRElbowToRWrist_X + deltaRElbowToRWrist_Y * deltaRElbowToRWrist_Y);
+            double degreeRElbowToRWrist = deltaRElbowToRWrist_Y / deltaRElbowToRWrist_X;
+            double degreeRElbowToRWristCos = deltaRElbowToRWrist_X / lenghRElbowToRWrist;
+
+            //腰到头的连线的角度
+            double deltaHipToHead_X = jointPoints[JointType.Head].X - jointPoints[JointType.SpineBase].X;
+            double deltaHipToHead_Y = jointPoints[JointType.Head].Y - jointPoints[JointType.SpineBase].Y;
+            double lenghHipToHead = Math.Sqrt(deltaHipToHead_X * deltaHipToHead_X + deltaHipToHead_Y * deltaHipToHead_Y);
+            double degreeHipToHead = deltaHipToHead_Y / deltaHipToHead_X;
+            double degreeHipToHeadCos = deltaHipToHead_X / lenghHipToHead;
+
+            //脖子到头的连线的角度
+            double deltaNeckToHead_X = jointPoints[JointType.Head].X - jointPoints[JointType.Neck].X;
+            double deltaNeckToHead_Y = jointPoints[JointType.Head].Y - jointPoints[JointType.Neck].Y;
+            double lenghNeckToHead = Math.Sqrt(deltaNeckToHead_X * deltaNeckToHead_X + deltaNeckToHead_Y * deltaNeckToHead_Y);
+            double degreeNeckToHead = deltaNeckToHead_Y / deltaNeckToHead_X;
+            double degreeNeckToHeadCos = deltaNeckToHead_X / lenghNeckToHead;
+
+            bool checkAll = true;
+            float checkLimit = 0.6f;
+            // Draw the bones
+            foreach (var bone in this.bones)
+            {
+                if ((bone.Item1 == JointType.WristLeft && bone.Item2 == JointType.HandLeft)
+                    || (bone.Item1 == JointType.WristRight && bone.Item2 == JointType.HandRight)
+                    || (bone.Item1 == JointType.HandLeft && bone.Item2 == JointType.HandTipLeft)
+                    || (bone.Item1 == JointType.HandRight && bone.Item2 == JointType.HandTipRight)
+                    || (bone.Item1 == JointType.WristLeft && bone.Item2 == JointType.ThumbLeft)
+                    || (bone.Item1 == JointType.WristRight && bone.Item2 == JointType.ThumbRight))
+                {
+                    continue;
+                }
+                drawBrush = null;
+
+                Pen newPen = drawingPen;
+
+                double p = -1;
+                if (bone.Item1 == JointType.ShoulderLeft && bone.Item2 == JointType.ElbowLeft)
+                {
+                    p = Math.Abs(degreeLShoulderToLElbowCos - (Math.Cos(Math.PI * 0.5)));
+                    p = 1 - Math.Min(p, 1);
+                    p = deltaLShoulderToLElbow_Y > 0 ? p : 0;
+
+                    checkAll &= CheckBone((float)p, checkLimit, out drawBrush);
+                }
+                if (bone.Item1 == JointType.ElbowLeft && bone.Item2 == JointType.WristLeft)
+                {
+                    p = Math.Abs(degreeLElbowToLWristCos - (Math.Cos(-Math.PI * 0.75)));
+                    p = 1 - Math.Min(p, 1);
+                    p = deltaLElbowToLWrist_X < 0 ? p : 0;
+                    p = deltaLElbowToLWrist_Y < 0 ? p : 0;
+                    checkAll &= CheckBone((float)p, checkLimit, out drawBrush);
+                }
+
+                if (bone.Item1 == JointType.ShoulderRight && bone.Item2 == JointType.ElbowRight)
+                {
+                    p = Math.Abs(degreeRShoulderToRElbowCos - (Math.Cos(Math.PI * 0.15)));
+                    p = 1 - Math.Min(p, 1);
+                    p = deltaRShoulderToRElbow_X > 0 ? p : 0;
+                    p = deltaRShoulderToRElbow_Y > 0 ? p : 0;
+                    checkAll &= CheckBone((float)p, checkLimit, out drawBrush);
+                }
+                if (bone.Item1 == JointType.ElbowRight && bone.Item2 == JointType.WristRight)
+                {
+                    p = Math.Abs(degreeRElbowToRWristCos - (Math.Cos(Math.PI * 0.5 + Math.PI * 0.3)));
+                    p = 1 - Math.Min(p, 1);
+                    p = deltaRElbowToRWrist_X < 0 ? p : 0;
+                    p = deltaRElbowToRWrist_Y < 0 ? p : 0;
+                    checkAll &= CheckBone((float)p, checkLimit, out drawBrush);
+                }
+                if ((bone.Item1 == JointType.Head && bone.Item2 == JointType.Neck))
+                {
+                    p = Math.Abs(degreeNeckToHeadCos - (Math.Cos(-Math.PI * 0.33)));
+                    p = 1 - Math.Min(p, 1);
+                    p = deltaNeckToHead_X > 0 ? p : 0;
+
+                    checkAll &= CheckBone((float)p, checkLimit, out drawBrush);
+                }
+
+                if (p != -1)
+                    newPen = new Pen(drawBrush, 6);
+
+                this.DrawBone(joints, jointPoints, bone.Item1, bone.Item2, drawingContext, newPen);
+            }
+
+            return checkAll;
+        }
+
+        //DrawTargetBody_8 == DrawTargetBody_2
+
+        private bool DrawTargetBody_9(IReadOnlyDictionary<JointType, Joint> joints, IDictionary<JointType, Point> jointPoints, DrawingContext drawingContext, Pen drawingPen)
+        {
+
+            Brush drawBrush = new SolidColorBrush(Color.FromArgb(255, 255, 255, 255));
+
+            //左肩到左肘的连线
+            double deltaLShoulderToLElbow_X = jointPoints[JointType.ElbowLeft].X - jointPoints[JointType.ShoulderLeft].X;
+            double deltaLShoulderToLElbow_Y = jointPoints[JointType.ElbowLeft].Y - jointPoints[JointType.ShoulderLeft].Y;
+            double lenghLShoulderToLElbow = Math.Sqrt(deltaLShoulderToLElbow_X * deltaLShoulderToLElbow_X + deltaLShoulderToLElbow_Y * deltaLShoulderToLElbow_Y);
+            double degreeLShoulderToLElbow = deltaLShoulderToLElbow_Y / deltaLShoulderToLElbow_X;
+            double degreeLShoulderToLElbowCos = deltaLShoulderToLElbow_X / lenghLShoulderToLElbow;
+
+            //左肘到左腕的连线
+            double deltaLElbowToLWrist_X = jointPoints[JointType.WristLeft].X - jointPoints[JointType.ElbowLeft].X;
+            double deltaLElbowToLWrist_Y = jointPoints[JointType.WristLeft].Y - jointPoints[JointType.ElbowLeft].Y;
+            double lenghLElbowToLWrist = Math.Sqrt(deltaLElbowToLWrist_X * deltaLElbowToLWrist_X + deltaLElbowToLWrist_Y * deltaLElbowToLWrist_Y);
+            double degreeLElbowToLWrist = deltaLElbowToLWrist_Y / deltaLElbowToLWrist_X;
+            double degreeLElbowToLWristCos = deltaLElbowToLWrist_X / lenghLElbowToLWrist;
+
+
+            //右肩到右肘的连线
+            double deltaRShoulderToRElbow_X = jointPoints[JointType.ElbowRight].X - jointPoints[JointType.ShoulderRight].X;
+            double deltaRShoulderToRElbow_Y = jointPoints[JointType.ElbowRight].Y - jointPoints[JointType.ShoulderRight].Y;
+            double lenghRShoulderToRElbow = Math.Sqrt(deltaRShoulderToRElbow_X * deltaRShoulderToRElbow_X + deltaRShoulderToRElbow_Y * deltaRShoulderToRElbow_Y);
+            double degreeRShoulderToRElbow = deltaRShoulderToRElbow_Y / deltaRShoulderToRElbow_X;
+            double degreeRShoulderToRElbowCos = deltaRShoulderToRElbow_X / lenghRShoulderToRElbow;
+
+            //右肘到右腕的连线
+            double deltaRElbowToRWrist_X = jointPoints[JointType.WristRight].X - jointPoints[JointType.ElbowRight].X;
+            double deltaRElbowToRWrist_Y = jointPoints[JointType.WristRight].Y - jointPoints[JointType.ElbowRight].Y;
+            double lenghRElbowToRWrist = Math.Sqrt(deltaRElbowToRWrist_X * deltaRElbowToRWrist_X + deltaRElbowToRWrist_Y * deltaRElbowToRWrist_Y);
+            double degreeRElbowToRWrist = deltaRElbowToRWrist_Y / deltaRElbowToRWrist_X;
+            double degreeRElbowToRWristCos = deltaRElbowToRWrist_X / lenghRElbowToRWrist;
+
+            //腰到头的连线的角度
+            double deltaHipToHead_X = jointPoints[JointType.Head].X - jointPoints[JointType.SpineBase].X;
+            double deltaHipToHead_Y = jointPoints[JointType.Head].Y - jointPoints[JointType.SpineBase].Y;
+            double lenghHipToHead = Math.Sqrt(deltaHipToHead_X * deltaHipToHead_X + deltaHipToHead_Y * deltaHipToHead_Y);
+            double degreeHipToHead = deltaHipToHead_Y / deltaHipToHead_X;
+            double degreeHipToHeadCos = deltaHipToHead_X / lenghHipToHead;
+
+            //腰子到头的连线的角度
+            double deltaHipToNeck_X = jointPoints[JointType.Head].X - jointPoints[JointType.SpineBase].X;
+            double deltaHipToNeck_Y = jointPoints[JointType.Head].Y - jointPoints[JointType.SpineBase].Y;
+            double lenghHipToNeck = Math.Sqrt(deltaHipToNeck_X * deltaHipToNeck_X + deltaHipToNeck_Y * deltaHipToNeck_Y);
+            double degreeHipToNeck = deltaHipToNeck_Y / deltaHipToNeck_X;
+            double degreeHipToNeckCos = deltaHipToNeck_X / lenghHipToNeck;
+
+
+            //脖子到头的连线的角度
+            double deltaNeckToHead_X = jointPoints[JointType.Head].X - jointPoints[JointType.Neck].X;
+            double deltaNeckToHead_Y = jointPoints[JointType.Head].Y - jointPoints[JointType.Neck].Y;
+            double lenghNeckToHead = Math.Sqrt(deltaNeckToHead_X * deltaNeckToHead_X + deltaNeckToHead_Y * deltaNeckToHead_Y);
+            double degreeNeckToHead = deltaNeckToHead_Y / deltaNeckToHead_X;
+            double degreeNeckToHeadCos = deltaNeckToHead_X / lenghNeckToHead;
+
+            bool checkAll = true;
+            float checkLimit = 0.5f;
+            // Draw the bones
+            foreach (var bone in this.bones)
+            {
+                if ((bone.Item1 == JointType.WristLeft && bone.Item2 == JointType.HandLeft)
+                    || (bone.Item1 == JointType.WristRight && bone.Item2 == JointType.HandRight)
+                    || (bone.Item1 == JointType.HandLeft && bone.Item2 == JointType.HandTipLeft)
+                    || (bone.Item1 == JointType.HandRight && bone.Item2 == JointType.HandTipRight)
+                    || (bone.Item1 == JointType.WristLeft && bone.Item2 == JointType.ThumbLeft)
+                    || (bone.Item1 == JointType.WristRight && bone.Item2 == JointType.ThumbRight))
+                {
+                    continue;
+                }
+                drawBrush = null;
+
+                Pen newPen = drawingPen;
+
+                double p = -1;
+                if (bone.Item1 == JointType.ShoulderLeft && bone.Item2 == JointType.ElbowLeft)
+                {
+                    p = Math.Abs(degreeLShoulderToLElbowCos - (Math.Cos(Math.PI * 0.75)));
+                    p = 1 - Math.Min(p, 1);
+                    p = deltaLShoulderToLElbow_Y > 0 ? p : 0;
+                    p = deltaLShoulderToLElbow_X < 0 ? p : 0;
+                    checkAll &= CheckBone((float)p, checkLimit, out drawBrush);
+                }
+                if (bone.Item1 == JointType.ElbowLeft && bone.Item2 == JointType.WristLeft)
+                {
+                    p = Math.Abs(degreeLElbowToLWristCos - (Math.Cos(Math.PI * 0.3)));
+                    p = 1 - Math.Min(p, 1);
+                    p = deltaLElbowToLWrist_Y > 0 ? p : 0;
+                    p = deltaLElbowToLWrist_X > 0 ? p : 0;
+                    checkAll &= CheckBone((float)p, checkLimit, out drawBrush);
+                }
+
+                if (bone.Item1 == JointType.ShoulderRight && bone.Item2 == JointType.ElbowRight)
+                {
+                    p = Math.Abs(degreeRShoulderToRElbowCos - (Math.Cos(Math.PI * 0.3)));
+                    p = 1 - Math.Min(p, 1);
+                    p = deltaRShoulderToRElbow_Y > 0 ? p : 0;
+                    p = deltaRShoulderToRElbow_X > 0 ? p : 0;
+                    checkAll &= CheckBone((float)p, checkLimit, out drawBrush);
+                }
+                if (bone.Item1 == JointType.ElbowRight && bone.Item2 == JointType.WristRight)
+                {
+                    p = Math.Abs(degreeRElbowToRWristCos - (Math.Cos(Math.PI * 1.25)));
+                    p = 1 - Math.Min(p, 1);
+                    p = deltaRElbowToRWrist_Y < 0 ? p : 0;
+                    p = deltaRElbowToRWrist_X < 0 ? p : 0;
+                    checkAll &= CheckBone((float)p, checkLimit, out drawBrush);
+                }
+                if ((bone.Item1 == JointType.Head && bone.Item2 == JointType.Neck))
+                {
+                    //p = Math.Abs(degreeNeckToHeadCos - (Math.Cos(-Math.PI * 0.5)));
+                    //p = 1 - Math.Min(p, 1);
+                    //p = deltaNeckToHead_Y < 0 ? p : 0;
+
+                    //checkAll &= CheckBone((float)p, checkLimit, out drawBrush);
+                }
+                if ((bone.Item1 == JointType.Neck && bone.Item2 == JointType.SpineShoulder) ||
+                    (bone.Item1 == JointType.SpineShoulder && bone.Item2 == JointType.SpineMid) ||
+                    (bone.Item1 == JointType.SpineMid && bone.Item2 == JointType.SpineBase))
+                {
+                    //p = Math.Abs(degreeHipToNeckCos - (Math.Cos(Math.PI + Math.PI * 0.45)));
+                    //p = 1 - Math.Min(p, 1);
+                    //p = deltaHipToNeck_Y < 0 ? p : 0;
+
+                    //checkAll &= CheckBone((float)p, checkLimit, out drawBrush);
+                }
+                if (p != -1)
+                    newPen = new Pen(drawBrush, 6);
+
+                this.DrawBone(joints, jointPoints, bone.Item1, bone.Item2, drawingContext, newPen);
+            }
+
+            return checkAll;
+        }
+
+        private bool DrawTargetBody_10(IReadOnlyDictionary<JointType, Joint> joints, IDictionary<JointType, Point> jointPoints, DrawingContext drawingContext, Pen drawingPen)
+        {
+
+            Brush drawBrush = new SolidColorBrush(Color.FromArgb(255, 255, 255, 255));
+
+            //左肩到左肘的连线
+            double deltaLShoulderToLElbow_X = jointPoints[JointType.ElbowLeft].X - jointPoints[JointType.ShoulderLeft].X;
+            double deltaLShoulderToLElbow_Y = jointPoints[JointType.ElbowLeft].Y - jointPoints[JointType.ShoulderLeft].Y;
+            double lenghLShoulderToLElbow = Math.Sqrt(deltaLShoulderToLElbow_X * deltaLShoulderToLElbow_X + deltaLShoulderToLElbow_Y * deltaLShoulderToLElbow_Y);
+            double degreeLShoulderToLElbow = deltaLShoulderToLElbow_Y / deltaLShoulderToLElbow_X;
+            double degreeLShoulderToLElbowCos = deltaLShoulderToLElbow_X / lenghLShoulderToLElbow;
+
+            //左肘到左腕的连线
+            double deltaLElbowToLWrist_X = jointPoints[JointType.WristLeft].X - jointPoints[JointType.ElbowLeft].X;
+            double deltaLElbowToLWrist_Y = jointPoints[JointType.WristLeft].Y - jointPoints[JointType.ElbowLeft].Y;
+            double lenghLElbowToLWrist = Math.Sqrt(deltaLElbowToLWrist_X * deltaLElbowToLWrist_X + deltaLElbowToLWrist_Y * deltaLElbowToLWrist_Y);
+            double degreeLElbowToLWrist = deltaLElbowToLWrist_Y / deltaLElbowToLWrist_X;
+            double degreeLElbowToLWristCos = deltaLElbowToLWrist_X / lenghLElbowToLWrist;
+
+
+            //右肩到右肘的连线
+            double deltaRShoulderToRElbow_X = jointPoints[JointType.ElbowRight].X - jointPoints[JointType.ShoulderRight].X;
+            double deltaRShoulderToRElbow_Y = jointPoints[JointType.ElbowRight].Y - jointPoints[JointType.ShoulderRight].Y;
+            double lenghRShoulderToRElbow = Math.Sqrt(deltaRShoulderToRElbow_X * deltaRShoulderToRElbow_X + deltaRShoulderToRElbow_Y * deltaRShoulderToRElbow_Y);
+            double degreeRShoulderToRElbow = deltaRShoulderToRElbow_Y / deltaRShoulderToRElbow_X;
+            double degreeRShoulderToRElbowCos = deltaRShoulderToRElbow_X / lenghRShoulderToRElbow;
+
+            //右肘到右腕的连线
+            double deltaRElbowToRWrist_X = jointPoints[JointType.WristRight].X - jointPoints[JointType.ElbowRight].X;
+            double deltaRElbowToRWrist_Y = jointPoints[JointType.WristRight].Y - jointPoints[JointType.ElbowRight].Y;
+            double lenghRElbowToRWrist = Math.Sqrt(deltaRElbowToRWrist_X * deltaRElbowToRWrist_X + deltaRElbowToRWrist_Y * deltaRElbowToRWrist_Y);
+            double degreeRElbowToRWrist = deltaRElbowToRWrist_Y / deltaRElbowToRWrist_X;
+            double degreeRElbowToRWristCos = deltaRElbowToRWrist_X / lenghRElbowToRWrist;
+
+            //腰到头的连线的角度
+            double deltaHipToHead_X = jointPoints[JointType.Head].X - jointPoints[JointType.SpineBase].X;
+            double deltaHipToHead_Y = jointPoints[JointType.Head].Y - jointPoints[JointType.SpineBase].Y;
+            double lenghHipToHead = Math.Sqrt(deltaHipToHead_X * deltaHipToHead_X + deltaHipToHead_Y * deltaHipToHead_Y);
+            double degreeHipToHead = deltaHipToHead_Y / deltaHipToHead_X;
+            double degreeHipToHeadCos = deltaHipToHead_X / lenghHipToHead;
+
+            //腰子到头的连线的角度
+            double deltaHipToNeck_X = jointPoints[JointType.Head].X - jointPoints[JointType.SpineBase].X;
+            double deltaHipToNeck_Y = jointPoints[JointType.Head].Y - jointPoints[JointType.SpineBase].Y;
+            double lenghHipToNeck = Math.Sqrt(deltaHipToNeck_X * deltaHipToNeck_X + deltaHipToNeck_Y * deltaHipToNeck_Y);
+            double degreeHipToNeck = deltaHipToNeck_Y / deltaHipToNeck_X;
+            double degreeHipToNeckCos = deltaHipToNeck_X / lenghHipToNeck;
+
+
+            //脖子到头的连线的角度
+            double deltaNeckToHead_X = jointPoints[JointType.Head].X - jointPoints[JointType.Neck].X;
+            double deltaNeckToHead_Y = jointPoints[JointType.Head].Y - jointPoints[JointType.Neck].Y;
+            double lenghNeckToHead = Math.Sqrt(deltaNeckToHead_X * deltaNeckToHead_X + deltaNeckToHead_Y * deltaNeckToHead_Y);
+            double degreeNeckToHead = deltaNeckToHead_Y / deltaNeckToHead_X;
+            double degreeNeckToHeadCos = deltaNeckToHead_X / lenghNeckToHead;
+
+            bool checkAll = true;
+            float checkLimit = 0.5f;
+            // Draw the bones
+            foreach (var bone in this.bones)
+            {
+                if ((bone.Item1 == JointType.WristLeft && bone.Item2 == JointType.HandLeft)
+                    || (bone.Item1 == JointType.WristRight && bone.Item2 == JointType.HandRight)
+                    || (bone.Item1 == JointType.HandLeft && bone.Item2 == JointType.HandTipLeft)
+                    || (bone.Item1 == JointType.HandRight && bone.Item2 == JointType.HandTipRight)
+                    || (bone.Item1 == JointType.WristLeft && bone.Item2 == JointType.ThumbLeft)
+                    || (bone.Item1 == JointType.WristRight && bone.Item2 == JointType.ThumbRight))
+                {
+                    continue;
+                }
+                drawBrush = null;
+
+                Pen newPen = drawingPen;
+
+                double p = -1;
+                if (bone.Item1 == JointType.ShoulderLeft && bone.Item2 == JointType.ElbowLeft)
+                {
+                    p = Math.Abs(degreeLShoulderToLElbowCos - (Math.Cos(Math.PI * 0.75)));
+                    p = 1 - Math.Min(p, 1);
+                    p = deltaLShoulderToLElbow_Y > 0 ? p : 0;
+                    p = deltaLShoulderToLElbow_X < 0 ? p : 0;
+                    checkAll &= CheckBone((float)p, checkLimit, out drawBrush);
+                }
+                if (bone.Item1 == JointType.ElbowLeft && bone.Item2 == JointType.WristLeft)
+                {
+                    p = Math.Abs(degreeLElbowToLWristCos - (Math.Cos(-Math.PI * 0.2)));
+                    p = 1 - Math.Min(p, 1);
+                    p = deltaLElbowToLWrist_Y < 0 ? p : 0;
+                    p = deltaLElbowToLWrist_X > 0 ? p : 0;
+                    checkAll &= CheckBone((float)p, checkLimit, out drawBrush);
+                }
+
+                if (bone.Item1 == JointType.ShoulderRight && bone.Item2 == JointType.ElbowRight)
+                {
+                    p = Math.Abs(degreeRShoulderToRElbowCos - (Math.Cos(Math.PI * 0.4)));
+                    p = 1 - Math.Min(p, 1);
+                    p = deltaRShoulderToRElbow_Y > 0 ? p : 0;
+                    p = deltaRShoulderToRElbow_X > 0 ? p : 0;
+                    checkAll &= CheckBone((float)p, checkLimit, out drawBrush);
+                }
+                if (bone.Item1 == JointType.ElbowRight && bone.Item2 == JointType.WristRight)
+                {
+                    p = Math.Abs(degreeRElbowToRWristCos - (Math.Cos(-Math.PI * 0.25)));
+                    p = 1 - Math.Min(p, 1);
+                    p = deltaRElbowToRWrist_Y < 0 ? p : 0;
+                    p = deltaRElbowToRWrist_X > 0 ? p : 0;
+                    checkAll &= CheckBone((float)p, checkLimit, out drawBrush);
+                }
+                if ((bone.Item1 == JointType.Head && bone.Item2 == JointType.Neck))
+                {
+                    //p = Math.Abs(degreeNeckToHeadCos - (Math.Cos(-Math.PI * 0.5)));
+                    //p = 1 - Math.Min(p, 1);
+                    //p = deltaNeckToHead_Y < 0 ? p : 0;
+
+                    //checkAll &= CheckBone((float)p, checkLimit, out drawBrush);
+                }
+                if ((bone.Item1 == JointType.Neck && bone.Item2 == JointType.SpineShoulder) ||
+                    (bone.Item1 == JointType.SpineShoulder && bone.Item2 == JointType.SpineMid) ||
+                    (bone.Item1 == JointType.SpineMid && bone.Item2 == JointType.SpineBase))
+                {
+                    //p = Math.Abs(degreeHipToNeckCos - (Math.Cos(Math.PI + Math.PI * 0.45)));
+                    //p = 1 - Math.Min(p, 1);
+                    //p = deltaHipToNeck_Y < 0 ? p : 0;
+
+                    //checkAll &= CheckBone((float)p, checkLimit, out drawBrush);
+                }
+                if (p != -1)
+                    newPen = new Pen(drawBrush, 6);
+
+                this.DrawBone(joints, jointPoints, bone.Item1, bone.Item2, drawingContext, newPen);
+            }
+
+            return checkAll;
+        }
+
+        //DrawTargetBody_11 == DrawTargetBody_4
+
+        private bool DrawTargetBody_12(IReadOnlyDictionary<JointType, Joint> joints, IDictionary<JointType, Point> jointPoints, DrawingContext drawingContext, Pen drawingPen)
+        {
+
+            Brush drawBrush = new SolidColorBrush(Color.FromArgb(255, 255, 255, 255));
+
+            //左肩到左肘的连线
+            double deltaLShoulderToLElbow_X = jointPoints[JointType.ElbowLeft].X - jointPoints[JointType.ShoulderLeft].X;
+            double deltaLShoulderToLElbow_Y = jointPoints[JointType.ElbowLeft].Y - jointPoints[JointType.ShoulderLeft].Y;
+            double lenghLShoulderToLElbow = Math.Sqrt(deltaLShoulderToLElbow_X * deltaLShoulderToLElbow_X + deltaLShoulderToLElbow_Y * deltaLShoulderToLElbow_Y);
+            double degreeLShoulderToLElbow = deltaLShoulderToLElbow_Y / deltaLShoulderToLElbow_X;
+            double degreeLShoulderToLElbowCos = deltaLShoulderToLElbow_X / lenghLShoulderToLElbow;
+
+            //左肘到左腕的连线
+            double deltaLElbowToLWrist_X = jointPoints[JointType.WristLeft].X - jointPoints[JointType.ElbowLeft].X;
+            double deltaLElbowToLWrist_Y = jointPoints[JointType.WristLeft].Y - jointPoints[JointType.ElbowLeft].Y;
+            double lenghLElbowToLWrist = Math.Sqrt(deltaLElbowToLWrist_X * deltaLElbowToLWrist_X + deltaLElbowToLWrist_Y * deltaLElbowToLWrist_Y);
+            double degreeLElbowToLWrist = deltaLElbowToLWrist_Y / deltaLElbowToLWrist_X;
+            double degreeLElbowToLWristCos = deltaLElbowToLWrist_X / lenghLElbowToLWrist;
+
+
+            //右肩到右肘的连线
+            double deltaRShoulderToRElbow_X = jointPoints[JointType.ElbowRight].X - jointPoints[JointType.ShoulderRight].X;
+            double deltaRShoulderToRElbow_Y = jointPoints[JointType.ElbowRight].Y - jointPoints[JointType.ShoulderRight].Y;
+            double lenghRShoulderToRElbow = Math.Sqrt(deltaRShoulderToRElbow_X * deltaRShoulderToRElbow_X + deltaRShoulderToRElbow_Y * deltaRShoulderToRElbow_Y);
+            double degreeRShoulderToRElbow = deltaRShoulderToRElbow_Y / deltaRShoulderToRElbow_X;
+            double degreeRShoulderToRElbowCos = deltaRShoulderToRElbow_X / lenghRShoulderToRElbow;
+
+            //右肘到右腕的连线
+            double deltaRElbowToRWrist_X = jointPoints[JointType.WristRight].X - jointPoints[JointType.ElbowRight].X;
+            double deltaRElbowToRWrist_Y = jointPoints[JointType.WristRight].Y - jointPoints[JointType.ElbowRight].Y;
+            double lenghRElbowToRWrist = Math.Sqrt(deltaRElbowToRWrist_X * deltaRElbowToRWrist_X + deltaRElbowToRWrist_Y * deltaRElbowToRWrist_Y);
+            double degreeRElbowToRWrist = deltaRElbowToRWrist_Y / deltaRElbowToRWrist_X;
+            double degreeRElbowToRWristCos = deltaRElbowToRWrist_X / lenghRElbowToRWrist;
+
+            //腰到头的连线的角度
+            double deltaHipToHead_X = jointPoints[JointType.Head].X - jointPoints[JointType.SpineBase].X;
+            double deltaHipToHead_Y = jointPoints[JointType.Head].Y - jointPoints[JointType.SpineBase].Y;
+            double lenghHipToHead = Math.Sqrt(deltaHipToHead_X * deltaHipToHead_X + deltaHipToHead_Y * deltaHipToHead_Y);
+            double degreeHipToHead = deltaHipToHead_Y / deltaHipToHead_X;
+            double degreeHipToHeadCos = deltaHipToHead_X / lenghHipToHead;
+
+            //腰子到头的连线的角度
+            double deltaHipToNeck_X = jointPoints[JointType.Head].X - jointPoints[JointType.SpineBase].X;
+            double deltaHipToNeck_Y = jointPoints[JointType.Head].Y - jointPoints[JointType.SpineBase].Y;
+            double lenghHipToNeck = Math.Sqrt(deltaHipToNeck_X * deltaHipToNeck_X + deltaHipToNeck_Y * deltaHipToNeck_Y);
+            double degreeHipToNeck = deltaHipToNeck_Y / deltaHipToNeck_X;
+            double degreeHipToNeckCos = deltaHipToNeck_X / lenghHipToNeck;
+
+
+            //脖子到头的连线的角度
+            double deltaNeckToHead_X = jointPoints[JointType.Head].X - jointPoints[JointType.Neck].X;
+            double deltaNeckToHead_Y = jointPoints[JointType.Head].Y - jointPoints[JointType.Neck].Y;
+            double lenghNeckToHead = Math.Sqrt(deltaNeckToHead_X * deltaNeckToHead_X + deltaNeckToHead_Y * deltaNeckToHead_Y);
+            double degreeNeckToHead = deltaNeckToHead_Y / deltaNeckToHead_X;
+            double degreeNeckToHeadCos = deltaNeckToHead_X / lenghNeckToHead;
+
+            bool checkAll = true;
+            float checkLimit = 0.5f;
+            // Draw the bones
+            foreach (var bone in this.bones)
+            {
+                if ((bone.Item1 == JointType.WristLeft && bone.Item2 == JointType.HandLeft)
+                    || (bone.Item1 == JointType.WristRight && bone.Item2 == JointType.HandRight)
+                    || (bone.Item1 == JointType.HandLeft && bone.Item2 == JointType.HandTipLeft)
+                    || (bone.Item1 == JointType.HandRight && bone.Item2 == JointType.HandTipRight)
+                    || (bone.Item1 == JointType.WristLeft && bone.Item2 == JointType.ThumbLeft)
+                    || (bone.Item1 == JointType.WristRight && bone.Item2 == JointType.ThumbRight))
+                {
+                    continue;
+                }
+                drawBrush = null;
+
+                Pen newPen = drawingPen;
+
+                double p = -1;
+                if (bone.Item1 == JointType.ShoulderLeft && bone.Item2 == JointType.ElbowLeft)
+                {
+                    p = Math.Abs(degreeLShoulderToLElbowCos - (Math.Cos(Math.PI * 0.7)));
+                    p = 1 - Math.Min(p, 1);
+                    p = deltaLShoulderToLElbow_Y > 0 ? p : 0;
+                    p = deltaLShoulderToLElbow_X < 0 ? p : 0;
+                    checkAll &= CheckBone((float)p, checkLimit, out drawBrush);
+                }
+                if (bone.Item1 == JointType.ElbowLeft && bone.Item2 == JointType.WristLeft)
+                {
+                    p = Math.Abs(degreeLElbowToLWristCos - (Math.Cos(Math.PI * 0.8)));
+                    p = 1 - Math.Min(p, 1);
+                    p = deltaLElbowToLWrist_Y > 0 ? p : 0;
+                    p = deltaLElbowToLWrist_X < 0 ? p : 0;
+                    checkAll &= CheckBone((float)p, checkLimit, out drawBrush);
+                }
+
+                if (bone.Item1 == JointType.ShoulderRight && bone.Item2 == JointType.ElbowRight)
+                {
+                    p = Math.Abs(degreeRShoulderToRElbowCos - (Math.Cos(Math.PI * 0.3)));
+                    p = 1 - Math.Min(p, 1);
+                    p = deltaRShoulderToRElbow_Y > 0 ? p : 0;
+                    p = deltaRShoulderToRElbow_X > 0 ? p : 0;
+                    checkAll &= CheckBone((float)p, checkLimit, out drawBrush);
+                }
+                if (bone.Item1 == JointType.ElbowRight && bone.Item2 == JointType.WristRight)
+                {
+                    p = Math.Abs(degreeRElbowToRWristCos - (Math.Cos(Math.PI * 1.25)));
+                    p = 1 - Math.Min(p, 1);
+                    p = deltaRElbowToRWrist_Y < 0 ? p : 0;
+                    p = deltaRElbowToRWrist_X < 0 ? p : 0;
+                    checkAll &= CheckBone((float)p, checkLimit, out drawBrush);
+                }
+                if ((bone.Item1 == JointType.Head && bone.Item2 == JointType.Neck))
+                {
+                    //p = Math.Abs(degreeNeckToHeadCos - (Math.Cos(-Math.PI * 0.5)));
+                    //p = 1 - Math.Min(p, 1);
+                    //p = deltaNeckToHead_Y < 0 ? p : 0;
+
+                    //checkAll &= CheckBone((float)p, checkLimit, out drawBrush);
+                }
+                if ((bone.Item1 == JointType.Neck && bone.Item2 == JointType.SpineShoulder) ||
+                    (bone.Item1 == JointType.SpineShoulder && bone.Item2 == JointType.SpineMid) ||
+                    (bone.Item1 == JointType.SpineMid && bone.Item2 == JointType.SpineBase))
+                {
+                    //p = Math.Abs(degreeHipToNeckCos - (Math.Cos(Math.PI + Math.PI * 0.45)));
+                    //p = 1 - Math.Min(p, 1);
+                    //p = deltaHipToNeck_Y < 0 ? p : 0;
+
+                    //checkAll &= CheckBone((float)p, checkLimit, out drawBrush);
+                }
+                if (p != -1)
+                    newPen = new Pen(drawBrush, 6);
+
+                this.DrawBone(joints, jointPoints, bone.Item1, bone.Item2, drawingContext, newPen);
+            }
+
+            return checkAll;
+        }
+        
+        private bool DrawTargetBody_13(IReadOnlyDictionary<JointType, Joint> joints, IDictionary<JointType, Point> jointPoints, DrawingContext drawingContext, Pen drawingPen)
+        {
+
+            Brush drawBrush = new SolidColorBrush(Color.FromArgb(255, 255, 255, 255));
+
+            //左肩到左肘的连线
+            double deltaLShoulderToLElbow_X = jointPoints[JointType.ElbowLeft].X - jointPoints[JointType.ShoulderLeft].X;
+            double deltaLShoulderToLElbow_Y = jointPoints[JointType.ElbowLeft].Y - jointPoints[JointType.ShoulderLeft].Y;
+            double lenghLShoulderToLElbow = Math.Sqrt(deltaLShoulderToLElbow_X * deltaLShoulderToLElbow_X + deltaLShoulderToLElbow_Y * deltaLShoulderToLElbow_Y);
+            double degreeLShoulderToLElbow = deltaLShoulderToLElbow_Y / deltaLShoulderToLElbow_X;
+            double degreeLShoulderToLElbowCos = deltaLShoulderToLElbow_X / lenghLShoulderToLElbow;
+
+            //左肘到左腕的连线
+            double deltaLElbowToLWrist_X = jointPoints[JointType.WristLeft].X - jointPoints[JointType.ElbowLeft].X;
+            double deltaLElbowToLWrist_Y = jointPoints[JointType.WristLeft].Y - jointPoints[JointType.ElbowLeft].Y;
+            double lenghLElbowToLWrist = Math.Sqrt(deltaLElbowToLWrist_X * deltaLElbowToLWrist_X + deltaLElbowToLWrist_Y * deltaLElbowToLWrist_Y);
+            double degreeLElbowToLWrist = deltaLElbowToLWrist_Y / deltaLElbowToLWrist_X;
+            double degreeLElbowToLWristCos = deltaLElbowToLWrist_X / lenghLElbowToLWrist;
+
+
+            //右肩到右肘的连线
+            double deltaRShoulderToRElbow_X = jointPoints[JointType.ElbowRight].X - jointPoints[JointType.ShoulderRight].X;
+            double deltaRShoulderToRElbow_Y = jointPoints[JointType.ElbowRight].Y - jointPoints[JointType.ShoulderRight].Y;
+            double lenghRShoulderToRElbow = Math.Sqrt(deltaRShoulderToRElbow_X * deltaRShoulderToRElbow_X + deltaRShoulderToRElbow_Y * deltaRShoulderToRElbow_Y);
+            double degreeRShoulderToRElbow = deltaRShoulderToRElbow_Y / deltaRShoulderToRElbow_X;
+            double degreeRShoulderToRElbowCos = deltaRShoulderToRElbow_X / lenghRShoulderToRElbow;
+
+            //右肘到右腕的连线
+            double deltaRElbowToRWrist_X = jointPoints[JointType.WristRight].X - jointPoints[JointType.ElbowRight].X;
+            double deltaRElbowToRWrist_Y = jointPoints[JointType.WristRight].Y - jointPoints[JointType.ElbowRight].Y;
+            double lenghRElbowToRWrist = Math.Sqrt(deltaRElbowToRWrist_X * deltaRElbowToRWrist_X + deltaRElbowToRWrist_Y * deltaRElbowToRWrist_Y);
+            double degreeRElbowToRWrist = deltaRElbowToRWrist_Y / deltaRElbowToRWrist_X;
+            double degreeRElbowToRWristCos = deltaRElbowToRWrist_X / lenghRElbowToRWrist;
+
+            //腰到头的连线的角度
+            double deltaHipToHead_X = jointPoints[JointType.Head].X - jointPoints[JointType.SpineBase].X;
+            double deltaHipToHead_Y = jointPoints[JointType.Head].Y - jointPoints[JointType.SpineBase].Y;
+            double lenghHipToHead = Math.Sqrt(deltaHipToHead_X * deltaHipToHead_X + deltaHipToHead_Y * deltaHipToHead_Y);
+            double degreeHipToHead = deltaHipToHead_Y / deltaHipToHead_X;
+            double degreeHipToHeadCos = deltaHipToHead_X / lenghHipToHead;
+
+            bool checkAll = true;
+            float checkLimit = 0.5f;
+            // Draw the bones
+            foreach (var bone in this.bones)
+            {
+                if ((bone.Item1 == JointType.WristLeft && bone.Item2 == JointType.HandLeft)
+                    || (bone.Item1 == JointType.WristRight && bone.Item2 == JointType.HandRight)
+                    || (bone.Item1 == JointType.HandLeft && bone.Item2 == JointType.HandTipLeft)
+                    || (bone.Item1 == JointType.HandRight && bone.Item2 == JointType.HandTipRight)
+                    || (bone.Item1 == JointType.WristLeft && bone.Item2 == JointType.ThumbLeft)
+                    || (bone.Item1 == JointType.WristRight && bone.Item2 == JointType.ThumbRight))
+                {
+                    continue;
+                }
+                drawBrush = null;
+
+                Pen newPen = drawingPen;
+
+                double p = -1;
+                if (bone.Item1 == JointType.ShoulderLeft && bone.Item2 == JointType.ElbowLeft)
+                {
+                    p = Math.Abs(degreeLShoulderToLElbowCos - (Math.Cos(Math.PI * 0.65)));
+                    p = 1 - Math.Min(p, 1);
+                    p = deltaLShoulderToLElbow_Y > 0 ? p : 0;
+
+                    checkAll &= CheckBone((float)p, checkLimit, out drawBrush);
+                }
+                if (bone.Item1 == JointType.ElbowLeft && bone.Item2 == JointType.WristLeft)
+                {
+                    p = Math.Abs(degreeLElbowToLWristCos - (Math.Cos(-Math.PI * 0.55)));
+                    p = 1 - Math.Min(p, 1);
+                    p = deltaLElbowToLWrist_Y < 0 ? p : 0;
+                    checkAll &= CheckBone((float)p, checkLimit, out drawBrush);
+                }
+
+                if (bone.Item1 == JointType.ShoulderRight && bone.Item2 == JointType.ElbowRight)
+                {
+                    p = Math.Abs(degreeRShoulderToRElbowCos - (Math.Cos(-Math.PI * 0.2)));
+                    p = 1 - Math.Min(p, 1);
+                    p = deltaRShoulderToRElbow_X > 0 ? p : 0;
+                    p = deltaRShoulderToRElbow_Y < 0 ? p : 0;
+                    checkAll &= CheckBone((float)p, checkLimit, out drawBrush);
+                }
+                if (bone.Item1 == JointType.ElbowRight && bone.Item2 == JointType.WristRight)
+                {
+                    p = Math.Abs(degreeRElbowToRWristCos - (Math.Cos(-Math.PI * 0.6)));
+                    p = 1 - Math.Min(p, 1);
+                    p = deltaRElbowToRWrist_Y < 0 ? p : 0;
+                    p = deltaRElbowToRWrist_X < 0 ? p : 0;
+                    checkAll &= CheckBone((float)p, checkLimit, out drawBrush);
+                }
+                if ((bone.Item1 == JointType.Head && bone.Item2 == JointType.Neck) ||
+                    (bone.Item1 == JointType.Neck && bone.Item2 == JointType.SpineShoulder) ||
+                    (bone.Item1 == JointType.SpineShoulder && bone.Item2 == JointType.SpineMid) ||
+                    (bone.Item1 == JointType.SpineMid && bone.Item2 == JointType.SpineBase))
+                {
+                    p = Math.Abs(degreeHipToHeadCos - (Math.Cos(Math.PI * 0.33 + Math.PI)));
+                    p = 1 - Math.Min(p, 1);
+                    p = deltaHipToHead_X < 0 ? p : 0;
+
+                    checkAll &= CheckBone((float)p, checkLimit, out drawBrush);
+                }
+
+                if (p != -1)
+                    newPen = new Pen(drawBrush, 6);
+
+                this.DrawBone(joints, jointPoints, bone.Item1, bone.Item2, drawingContext, newPen);
+            }
+
+            return checkAll;
+        }
+
+        private void DrawJoint(IReadOnlyDictionary<JointType, Joint> joints, IDictionary<JointType, Point> jointPoints, DrawingContext drawingContext)
+        {
+            Brush drawBrush = new SolidColorBrush(Color.FromArgb(255, 255, 255, 255));
+
+            // Draw the joints
+            foreach (JointType jointType in joints.Keys)
+            {
+                if (jointType == JointType.ThumbLeft
+                    || jointType == JointType.ThumbRight
+                    || jointType == JointType.HandTipLeft
+                    || jointType == JointType.HandTipRight
+                    || jointType == JointType.HandLeft
+                    || jointType == JointType.HandRight)
+                    continue;
+                drawBrush = null;
+
+                TrackingState trackingState = joints[jointType].TrackingState;
+
+                if (trackingState == TrackingState.Tracked)
+                {
+                    drawBrush = this.trackedJointBrush;
+                }
+                else if (trackingState == TrackingState.Inferred)
+                {
+                    drawBrush = this.inferredJointBrush;
+                }
+
+                if (drawBrush != null)
+                {
+                    drawingContext.DrawEllipse(drawBrush, null, jointPoints[jointType], JointThickness, JointThickness);
                 }
             }
         }
-
-        /// <summary>
-        /// Handles the event which the sensor becomes unavailable (E.g. paused, closed, unplugged).
-        /// </summary>
-        /// <param name="sender">object sending the event</param>
-        /// <param name="e">event arguments</param>
-        private void Sensor_IsAvailableChanged(object sender, IsAvailableChangedEventArgs e)
-        {
-            // on failure, set the status text
-            this.StatusText = this.kinectSensor.IsAvailable ? Properties.Resources.RunningStatusText
-                                                            : Properties.Resources.SensorNotAvailableStatusText;
-        }
-
 
         void timer_Tick(object sender, EventArgs e)
         {
@@ -789,6 +2279,21 @@ namespace Microsoft.Samples.Kinect.SkeletonRecord
             m_deltaTime = m_timer - tempTimer;
 
             m_checkDelay += m_deltaTime;
+
+            scrollTimer += m_deltaTime;
+
+            if(m_bodyTracked)
+            {
+                bodyTrackTimer += m_deltaTime;
+                if (bodyTrackTimer >= 10 * bodyTrackTime)
+                    bodyTrackTimer = 10 * bodyTrackTime;
+            }
+            else{
+                bodyTrackTimer -= m_deltaTime;
+                if (bodyTrackTimer <= -10 * bodyTrackTime)
+                    bodyTrackTimer = -10 * bodyTrackTime;
+            }
+            Console.WriteLine(bodyTrackTimer);
 
             UpdateInfo();
 
@@ -824,174 +2329,424 @@ namespace Microsoft.Samples.Kinect.SkeletonRecord
             }
         }
 
-        void SelfController()
+
+        float bodyTrackTimer = 0;
+        float bodyTrackTime = 1000;
+
+        int m_intFlagToShow = 0;
+
+        float texFadeTimer = 0;
+        float texFadeTime = 1000;
+
+        float scrollTimer = 200000;
+        float scrollOpenTime = 1000;
+        float scrollStayTime = 3000;
+        float infoFadeInTime = 3300;
+        float infoFadeOutTime = 6700 + 9000;
+        float scrollCloseTime = 7000 + 9000;
+        float scrollOverTime = 9000 + 9000;
+
+
+        System.Drawing.Image srcImage;
+        System.Drawing.Bitmap resultImage;
+        System.Drawing.Graphics g;
+
+        bool m_lastChecked = false;
+
+        enum ScrollState
         {
-            //按1进入showmode, 按2恢复
-            if (Keyboard.IsKeyDown(Key.D1))
-            {
-                if (!isShowMode)
-                {
-                    isShowMode = true;
-                    SetShowMode();
-                }
-            }
-            if (Keyboard.IsKeyDown(Key.D2))
-            {
-                if (isShowMode)
-                {
-                    isShowMode = false;
-                    SetDebugMode();
-                }
-            }
-
+            Open,
+            Stay,
+            Close,
+            None
         }
+        ScrollState scrollSate = ScrollState.None;
 
-        void SetShowMode()
-        {
-            //---------------------------------------------------------
-            // 去掉边框放置在左上角   
-            this.Left = -10.0;
-            this.Top = 0.0;
-            this.Width = this.m_showWidth + 20;
-            this.Height = this.m_showHeight;
-
-            this.WindowState = System.Windows.WindowState.Normal;
-            this.WindowStyle = System.Windows.WindowStyle.None;
-            this.ResizeMode = System.Windows.ResizeMode.NoResize;
-            this.Topmost = true;
-        }
-
-        void SetDebugMode()
-        {
-            //---------------------------------------------------------
-            // 去掉边框放置在左上角   
-            this.Left = 0.0;
-            this.Top = 0.0;
-            this.Width = this.m_showWidth + 50;
-            this.Height = this.m_showHeight + 50;
-
-            this.WindowState = System.Windows.WindowState.Normal;
-            this.WindowStyle = System.Windows.WindowStyle.SingleBorderWindow;
-            this.ResizeMode = System.Windows.ResizeMode.CanResize;
-            this.Topmost = false;
-        }
+        ScrollState lastScrollSate = ScrollState.None;
 
 
+        bool checkStep = false;
 
+        int minTexNo = 0;
+        int maxTexNo = 13;
         void DrawShow(DrawingContext dc, int flag)
         {
-            dc.DrawRectangle(Brushes.Black, null, new Rect(-100.0, -100.0, 1, 1));
-            // Draw a transparent background to set the render size
-            SolidColorBrush bgBrush= new SolidColorBrush(Color.FromArgb(255, 0, 0, 0));
-            dc.DrawRectangle(bgBrush, null, new Rect(0.0, 0.0, m_showWidth, m_showHeight));
-
-            if (m_checkDelay > m_maxDelay && flag < 0)
+            m_maxDelay = (int)scrollOverTime + 1700;
+            if (TexList.Count < 0)
             {
-                m_hasChecked = false;
+                return;
             }
 
-            if(!hasInitImage)
+            if (!hasInitImage)
             {
-                for (int i = 0; i < ImageList.Count; i++)
+                for (int i = 0; i < TexList.Count; i++)
                 {
-                    dc.DrawImage(ImageList[i], new Rect(0, 0, m_showWidth, m_showHeight));
+                    dc.DrawImage(TexList[i], new Rect(0, 0, m_showWidth, m_showHeight));
                 }
                 hasInitImage = true;
             }
 
-            if (ImageList.Count > 0)
+            //======================================================================================================
+
+            m_lastChecked = m_hasChecked;
+
+            //如果评价返回的是-1（flag < 0） 并且显示时间大于最大显示时间，变成false
+            if (m_checkDelay > m_maxDelay)
             {
-
-                if (flag >= 0 && ImageList.Count > flag && m_checkDelay > m_maxDelay)
+                if(flag < 0)
                 {
-                    //dc.DrawRectangle(Brushes.BlueViolet, null, new Rect(0.0, 0.0, 420, 500));
-
+                    m_hasChecked = false;
+                }
+                else
+                {
                     m_drawFlag = flag;
                     m_hasChecked = true;
                     m_checkDelay = 0;
                 }
 
-                if (m_hasChecked && m_drawFlag >= 0 && m_drawFlag < ImageList.Count)
+
+                if (!m_lastChecked && m_hasChecked)
                 {
-                    m_lastCheckedPic = m_drawFlag;
-                    dc.DrawImage(ImageList[m_drawFlag], new Rect(0, 0, m_showWidth, m_showHeight));
+                    scrollTimer = 0;
+                    scrollAnim.ResetAnim();
+                }
+
+                //如果有人的话，显示提示用的图
+                //并且确定这一轮要用哪张图
+                if ((m_bodyTracked && !m_lastBodyTracked) || (m_lastChecked && !m_hasChecked))
+                {
+                    checkStep = true;
+
+                    Random random = new Random();
+                    int randomNumber = random.Next(minTexNo, maxTexNo + 1);
+                    randomNumber = randomNumber > 13 ? 13 : randomNumber;
+                    randomNumber = randomNumber < 0 ? 0 : randomNumber;
+                    m_intFlagToShow = randomNumber;
                 }
             }
 
+            if (!checkStep && m_bodyTracked)
+            {
+                checkStep = true;
+                Random random = new Random();
+                int randomNumber = random.Next(minTexNo, maxTexNo + 1);
+                randomNumber = randomNumber > 13 ? 13 : randomNumber;
+                randomNumber = randomNumber < 0 ? 0 : randomNumber;
+                m_intFlagToShow = randomNumber;
+            }
+
+
+            //渲染一个黑色的背景
+            dc.DrawRectangle(Brushes.Black, null, new Rect(0.0, 0.0, 1, 1));
+
+            
+            
+
+            //渲染下方的提示图
+            dc.DrawImage(HintList[m_intFlagToShow], new Rect(0, 0, m_showWidth, m_showHeight));
+            //渲染正中的信息提示
+            dc.DrawImage(startInfoTex, new Rect(startInfoX, startInfoY, startInfoWidth, startInfoHeight));
+
+            //m_lastBodyTracked = m_bodyTracked;
+
+
+            if(m_lastBodyTracked && !m_bodyTracked)
+            {
+                bodyTrackTimer = bodyTrackTime;
+            }
+
+            if (!m_lastBodyTracked && m_bodyTracked)
+            {
+                bodyTrackTimer = 0;
+            }
+
+            SolidColorBrush bgBlackBrush = new SolidColorBrush(Color.FromArgb(255, 0, 0, 0));
+
+            //渲染渐变的黑色遮罩
+            //有人接近的时候产生淡入效果，离开产生淡出效果
+            float p_bg = 0;
+            float alpha = 255;
+            if (m_bodyTracked)
+            {
+                if (bodyTrackTimer <= bodyTrackTime)
+                {
+                    if (bodyTrackTimer < 0)
+                    {
+                        bodyTrackTimer = 0;
+                    }
+                    p_bg = bodyTrackTimer / bodyTrackTime;
+                }
+                else
+                {
+                    p_bg = 1;
+                }
+            }
+            else
+            {
+                if (bodyTrackTimer >= 0)
+                {
+                    p_bg = bodyTrackTimer / bodyTrackTime;
+                }
+                else
+                {
+                    p_bg = 0;
+                }
+            }
+
+            alpha = (1 - p_bg * 1.0f) * 255;
+            //alpha *= 0.5f;
+            bgBlackBrush = new SolidColorBrush(Color.FromArgb((byte)alpha, 0, 0, 0));
+
+            dc.DrawRectangle(bgBlackBrush, null, new Rect(0.0, 0.0, m_showWidth, m_showHeight));
+
+
+            //渲染预览的小人动图
+            if (!m_bodyTracked && bodyTrackTimer <= 0)
+            {
+                SolidColorBrush previewBrush = new SolidColorBrush(Color.FromArgb(178, 0, 0, 0));
+                for (int i = 0; i < m_PreviewList.Count; i++)
+                {
+                    if (i != m_drawFlag && m_hasChecked == true)
+                        continue;
+
+                    float x = m_PreviewList[i].PosX;
+                    float y = m_PreviewList[i].PosY;
+
+
+                    //dc.DrawRectangle(previewBrush, null, new Rect(x, y, iconSize,iconSize));
+                    //dc.DrawImage(MoveImageList[i], new Rect(x, y, iconSize, iconSize));
+                    //if(i == 1)
+                    {
+                        m_PreviewList[i].DrawAnimPic(dc, m_deltaTime, x, y, iconSize, iconSize);
+                    }
+                }
+                dc.DrawImage(titleTex, new Rect(titleX, titleY, titleWidth, titleHeight));
+                
+            }
+
+
+
+            //主体的渲染逻辑
+            
+            float p_tex = 0;
+            if (m_hasChecked)
+            {
+                if (texFadeTimer < texFadeTime)
+                {
+                    texFadeTimer += m_deltaTime;
+
+                    p_tex = texFadeTimer / texFadeTime;
+                }
+                else
+                {
+                    p_tex = 1;
+                }
+            }
+            else
+            {
+                if (texFadeTimer > 0)
+                {
+                    texFadeTimer -= m_deltaTime;
+
+                    p_tex = texFadeTimer / texFadeTime;
+                }
+                else
+                {
+                    p_tex = 0;
+                }
+            }
+
+
+            if ((m_hasChecked || texFadeTimer > 0) && m_drawFlag >= 0 && m_drawFlag < TexList.Count)
+            {
+
+                if (p_tex < 0.99f)
+                {
+                    float opacity = p_tex;
+                    DrawImageBlend(dc, TexImageList[m_drawFlag], opacity,0,0,m_showWidth, m_showHeight);
+                }
+                else
+                {
+                    dc.DrawImage(TexList[m_drawFlag], new Rect(0, 0, m_showWidth, m_showHeight));
+                }
+
+            }
+     
             //Geometry ellipse = new EllipseGeometry(new Point(200, 70), 100, 50);
             //GeometryDrawing drawing = new GeometryDrawing(Brushes.LightBlue, new Pen(Brushes.Green, 1), ellipse);
             //dc.DrawDrawing(drawing);
             
             //dc.DrawEllipse(Brushes.Red, null, new Point(m_showWidth - 50, 0), 50, 50);
 
+            SolidColorBrush bgBrush = new SolidColorBrush(Color.FromArgb(0, 0, 0, 0));
+
+
+            //绘制洞窟外框
+            //dc.DrawImage(stoneBG, new Rect(0, 0, m_showWidth, m_showHeight));
+
+            //=========================================================================
             
+            lastScrollSate = scrollSate;
 
-            if(m_hasChecked == false)
+            if (scrollTimer >= 0 && scrollTimer < scrollOpenTime)
             {
-                for (int i = 0; i < m_PreviewList.Count; i++)
+                scrollSate = ScrollState.None;
+            }
+            if (scrollTimer >= scrollOpenTime && scrollTimer < scrollStayTime)
+            {
+                scrollSate = ScrollState.Open;
+            }
+            if (scrollTimer >= scrollStayTime && scrollTimer < scrollCloseTime)
+            {
+                scrollSate = ScrollState.Stay;
+            }
+            if (scrollTimer >= scrollCloseTime && scrollTimer < scrollOverTime)
+            {
+                scrollSate = ScrollState.Close;
+            }
+            if (scrollTimer >= scrollOverTime)
+            {
+                scrollSate = ScrollState.None;
+            }
+
+
+            if(scrollSate == ScrollState.None)
+            {
+
+            }
+            else if (scrollSate == ScrollState.Open)
+            {
+                scrollAnim.DrawAnimPic_Clamp(dc, m_deltaTime, infoX, infoY, infoWidth, infoHeight, 0, 19);
+            }
+            else if (scrollSate == ScrollState.Stay)
+            {
+                scrollAnim.DrawAnimPic_Clamp(dc, m_deltaTime, infoX, infoY, infoWidth, infoHeight, 20, 38);
+                //dc.DrawImage(InfoTexList[m_drawFlag], new Rect(infoX, infoY, infoWidth, infoHeight));
+                float infoAlpha = 0;
+                if (scrollTimer < infoFadeInTime)
                 {
-                    m_PreviewList[i].ResetPos();
+                    infoAlpha = (scrollTimer - scrollStayTime) / (infoFadeInTime - scrollStayTime);
                 }
-                if (m_lastCheckedPic < ImageList.Count && m_lastCheckedPic >= 0)
-                    dc.DrawImage(ImageList[m_lastCheckedPic], new Rect(0, 0, m_showWidth, m_showHeight));
-                dc.DrawRectangle(bgBrush, null, new Rect(0.0, 0.0, m_showWidth, m_showHeight));
-
-                int titleX = (int)(65.0f * (1.0f / 1080 * m_showWidth)) + (int)(0 * 360.0f * (1.0f / 1080 * m_showWidth));
-                int titleY = (int)(56.0f * (1.0f / 1920 * m_showHeight)) + (int)(5 * 342.0f * (1.0f / 1920 * m_showHeight));
-                dc.DrawImage(InfoImageList[InfoImageList.Count - 1], new Rect(titleX, titleY, titleWidth, titleHeight));
-            }
-
-
-            if (m_hasChecked && m_drawFlag < InfoImageList.Count)
-            {
-                dc.DrawImage(InfoImageList[m_drawFlag], new Rect(0, m_showHeight - infoHeight, infoWidth, infoHeight));
-            }
-
-            SolidColorBrush previewBrush = new SolidColorBrush(Color.FromArgb(178, 0, 0, 0));
-            for (int i = 0; i < m_PreviewList.Count; i++)
-            {
-                if (i != m_drawFlag && m_hasChecked == true)
-                    continue;
-
-                float x = m_PreviewList[i].PosX;
-                float y = m_PreviewList[i].PosY;
-                if (!m_hasChecked)
+                else if (scrollTimer < infoFadeOutTime)
                 {
-                    x = m_PreviewList[i].PosX;
-                    y = m_PreviewList[i].PosY;
+                    infoAlpha = 1;
                 }
                 else
                 {
-                    x = m_PreviewList[i].PosX;
-                    if (m_PreviewList[i].PosY < m_showHeight - infoHeight + previewOffset)
-                    {
-                        float speed = m_speed;
-                        float changePos = (m_showHeight - infoHeight + previewOffset) * 0.7f;
-                        if (m_PreviewList[i].PosY > changePos)
-                        {
-                            float a = 1.0f * (m_showHeight - m_PreviewList[i].PosY) / (m_showHeight - changePos);
-                            speed = a * a * a * m_speed;
-                        }
-                        m_PreviewList[i].PosY += m_deltaTime / 1000.0f * speed;
-                        
-                        
-                    }
-                    if (m_PreviewList[i].PosY > m_showHeight - infoHeight + previewOffset)
-                    {
-                        m_PreviewList[i].PosY = m_showHeight - infoHeight + previewOffset;
-                    }
-                    y = m_PreviewList[i].PosY;
+                    infoAlpha = (scrollTimer - infoFadeOutTime) / (scrollCloseTime - infoFadeOutTime);
+                    infoAlpha = 1 - infoAlpha;
                 }
-
-
-                //dc.DrawRectangle(previewBrush, null, new Rect(x, y, iconSize,iconSize));
-                //dc.DrawImage(MoveImageList[i], new Rect(x, y, iconSize, iconSize));
-                //if(i == 1)
+                infoAlpha = infoAlpha > 1f ? 1 : infoAlpha;
+                infoAlpha = infoAlpha < 0f ? 0f : infoAlpha;
+                if (infoAlpha == 1.0)
                 {
-                    m_PreviewList[i].DrawAnimPic(dc, m_deltaTime, x, y, iconSize, iconSize);
+                    dc.DrawImage(InfoTexList[m_drawFlag], new Rect(infoX, infoY, infoWidth, infoHeight));
                 }
+                else
+                {
+                    DrawImageBlend(dc, InfoTexImageList[m_drawFlag], infoAlpha, infoX, infoY, infoWidth, infoHeight, true);
+                }
+                
+                
+            }
+            else if (scrollSate == ScrollState.Close)
+            {
+                scrollAnim.DrawAnimPic_Clamp(dc, m_deltaTime, infoX, infoY, infoWidth, infoHeight, 39, 60);
             }
         }
+
+        private void DrawImageBlend(DrawingContext dc, System.Drawing.Image image, float alpha, float x, float y, float width, float height, bool makeTransparent = false)
+        {
+            if (makeTransparent)
+            {
+                image = TransparentImage(image);
+            }
+
+            float[][] nArray = { 
+            new float[] {1, 0, 0, 0, 0},
+            new float[] {0, 1, 0, 0, 0},
+            new float[] {0, 0, 1, 0, 0},
+            new float[] {0, 0, 0, 1, 0},
+            new float[] {0, 0, 0, 0, 1}
+            };
+            nArray[3][3] = alpha;
+            System.Drawing.Imaging.ColorMatrix matrix = new System.Drawing.Imaging.ColorMatrix(nArray);
+            ImageAttributes attributes = new ImageAttributes();
+            attributes.SetColorMatrix(matrix, ColorMatrixFlag.Default, ColorAdjustType.Bitmap);
+            attributes.ClearColorKey();
+            //srcImage = (System.Drawing.Image)BitmapImage2Bitmap(ImageList[m_drawFlag]);
+            resultImage = new System.Drawing.Bitmap(image.Width, image.Height);
+            g = System.Drawing.Graphics.FromImage(resultImage);
+
+            g.DrawImage(image, new System.Drawing.Rectangle(0, 0, image.Width, image.Height), 0, 0, image.Width, image.Height, System.Drawing.GraphicsUnit.Pixel, attributes);
+
+            dc.DrawImage(Bitmap2BitmapImage(resultImage), new Rect(x, y, width, height));
+            
+        }
+
+        private System.Drawing.Bitmap TransparentImage(System.Drawing.Image srcImage)
+        {
+            ImageAttributes attributes = new ImageAttributes();
+            System.Drawing.Bitmap resultImage = new System.Drawing.Bitmap(srcImage.Width, srcImage.Height);
+            System.Drawing.Graphics g = System.Drawing.Graphics.FromImage(resultImage);
+            g.DrawImage(srcImage, new System.Drawing.Rectangle(0, 0, srcImage.Width, srcImage.Height), 0, 0, srcImage.Width, srcImage.Height, System.Drawing.GraphicsUnit.Pixel, attributes);
+            resultImage.MakeTransparent(System.Drawing.Color.White);
+            return resultImage;
+        } 
+
+
+        private System.Drawing.Bitmap BitmapImage2Bitmap(BitmapImage bitmapImage)
+        {
+            // BitmapImage bitmapImage = new BitmapImage(new Uri("../Images/test.png", UriKind.Relative));
+
+            using (MemoryStream outStream = new MemoryStream())
+            {
+                BitmapEncoder enc = new BmpBitmapEncoder();
+                enc.Frames.Add(BitmapFrame.Create(bitmapImage));
+                enc.Save(outStream);
+                System.Drawing.Bitmap bitmap = new System.Drawing.Bitmap(outStream);
+
+                return new System.Drawing.Bitmap(bitmap);
+            }
+        }
+
+        [System.Runtime.InteropServices.DllImport("gdi32.dll")]
+        public static extern bool DeleteObject(IntPtr hObject);
+
+        private BitmapSource Bitmap2BitmapImage(System.Drawing.Bitmap bitmap)
+        {
+            IntPtr hBitmap = bitmap.GetHbitmap();
+            BitmapSource retval;
+
+            try
+            {
+                retval = System.Windows.Interop.Imaging.CreateBitmapSourceFromHBitmap(
+                             hBitmap,
+                             IntPtr.Zero,
+                             Int32Rect.Empty,
+                             BitmapSizeOptions.FromEmptyOptions());
+            }
+            finally
+            {
+                DeleteObject(hBitmap);
+            }
+
+            return retval;
+        }
+
+        public object Convert(object value)
+        {
+            MemoryStream ms = new MemoryStream();
+            ((System.Drawing.Bitmap)value).Save(ms, System.Drawing.Imaging.ImageFormat.Bmp);
+            BitmapImage image = new BitmapImage();
+            image.BeginInit();
+            ms.Seek(0, SeekOrigin.Begin);
+            image.StreamSource = ms;
+            image.EndInit();
+
+            return image;
+        }
+
 
         private int Judge(IReadOnlyDictionary<JointType, Joint> joints, IDictionary<JointType, Point> jointPoints)
         {
@@ -1499,49 +3254,317 @@ namespace Microsoft.Samples.Kinect.SkeletonRecord
             }
         }
 
-        /// <summary>
-        /// Draws indicators to show which edges are clipping body data
-        /// </summary>
-        /// <param name="body">body to draw clipping information for</param>
-        /// <param name="drawingContext">drawing context to draw to</param>
-        private void DrawClippedEdges(Body body, DrawingContext drawingContext)
+
+        void SelfController()
         {
-            FrameEdges clippedEdges = body.ClippedEdges;
-
-            if (clippedEdges.HasFlag(FrameEdges.Bottom))
+            //按1进入showmode, 按2恢复
+            if (Keyboard.IsKeyDown(Key.D1))
             {
-                drawingContext.DrawRectangle(
-                    Brushes.Red,
-                    null,
-                    new Rect(0, m_kinectDrawHeight/*this.displayHeight*/ - ClipBoundsThickness, m_kinectDrawWidth/*this.displayWidth*/, ClipBoundsThickness));
+                if (!isShowMode)
+                {
+                    isShowMode = true;
+                    SetShowMode();
+                }
+            }
+            if (Keyboard.IsKeyDown(Key.D2))
+            {
+                if (isShowMode)
+                {
+                    isShowMode = false;
+                    SetDebugMode();
+                }
             }
 
-            if (clippedEdges.HasFlag(FrameEdges.Top))
+        }
+
+        void SetShowMode()
+        {
+            //---------------------------------------------------------
+            // 去掉边框放置在左上角   
+            this.Left = -10.0;
+            this.Top = 0.0;
+            this.Width = this.m_showWidth + 20;
+            this.Height = this.m_showHeight;
+
+            this.WindowState = System.Windows.WindowState.Normal;
+            this.WindowStyle = System.Windows.WindowStyle.None;
+            this.ResizeMode = System.Windows.ResizeMode.NoResize;
+            this.Topmost = true;
+        }
+
+        void SetDebugMode()
+        {
+            //---------------------------------------------------------
+            // 去掉边框放置在左上角   
+            this.Left = 0.0;
+            this.Top = 0.0;
+            this.Width = this.m_showWidth + 50;
+            this.Height = this.m_showHeight + 50;
+
+            this.WindowState = System.Windows.WindowState.Normal;
+            this.WindowStyle = System.Windows.WindowStyle.SingleBorderWindow;
+            this.ResizeMode = System.Windows.ResizeMode.CanResize;
+            this.Topmost = false;
+        }
+
+        private bool LoadPic()
+        {
+            if (TexList == null)
             {
-                drawingContext.DrawRectangle(
-                    Brushes.Red,
-                    null,
-                    new Rect(0, 0, m_kinectDrawWidth/*this.displayWidth*/, ClipBoundsThickness));
+                TexList = new List<BitmapImage>();
             }
 
-            if (clippedEdges.HasFlag(FrameEdges.Left))
+            String imgFolder = System.IO.Path.GetDirectoryName(Application.ResourceAssembly.Location) + @"/Tex/";
+            if (!Directory.Exists(imgFolder))
+                return false;
+
+            DirectoryInfo ImgFolderInfo = new DirectoryInfo(imgFolder);
+
+
+            List<String> fileList = new List<String>();
+            foreach (FileInfo nextFile in ImgFolderInfo.GetFiles())
             {
-                drawingContext.DrawRectangle(
-                    Brushes.Red,
-                    null,
-                    new Rect(0, 0, ClipBoundsThickness, m_kinectDrawHeight/*this.displayHeight*/));
+                fileList.Add(nextFile.FullName);
             }
 
-            if (clippedEdges.HasFlag(FrameEdges.Right))
+            int imgCount = fileList.Count;
+            TexList.Clear();
+
+            for (int i = 0; i < imgCount; i++)
             {
-                drawingContext.DrawRectangle(
-                    Brushes.Red,
-                    null,
-                    new Rect(this.displayWidth - ClipBoundsThickness, 0, ClipBoundsThickness, m_kinectDrawHeight/*this.displayHeight*/));
+                String imgPath = fileList[i];
+                bool isExist = File.Exists(imgPath.ToString());
+                if (isExist)
+                {
+                    BitmapImage newImage = new BitmapImage(new Uri(imgPath, UriKind.Absolute));
+                    TexList.Add(newImage);
+                }
+
+            }
+            return true;
+        }
+
+
+
+
+        private bool LoadPic(string folderName, out List<BitmapImage> texList)
+        {
+            texList = new List<BitmapImage>();
+
+            String imgFolder = System.IO.Path.GetDirectoryName(Application.ResourceAssembly.Location) + folderName;
+            if (!Directory.Exists(imgFolder))
+                return false;
+
+            DirectoryInfo ImgFolderInfo = new DirectoryInfo(imgFolder);
+
+
+            List<String> fileList = new List<String>();
+            foreach (FileInfo nextFile in ImgFolderInfo.GetFiles())
+            {
+                fileList.Add(nextFile.FullName);
+            }
+
+            int imgCount = fileList.Count;
+            texList.Clear();
+
+            for (int i = 0; i < imgCount; i++)
+            {
+                String imgPath = fileList[i];
+                bool isExist = File.Exists(imgPath.ToString());
+                if (isExist)
+                {
+                    BitmapImage newImage = new BitmapImage(new Uri(imgPath, UriKind.Absolute));
+                    texList.Add(newImage);
+                }
+
+            }
+            return true;
+        }
+
+        private bool LoadPicImage(string folderName, out List<System.Drawing.Image> texList)
+        {
+            texList = new List<System.Drawing.Image>();
+
+            String imgFolder = System.IO.Path.GetDirectoryName(Application.ResourceAssembly.Location) + folderName;
+            if (!Directory.Exists(imgFolder))
+                return false;
+
+            DirectoryInfo ImgFolderInfo = new DirectoryInfo(imgFolder);
+
+
+            List<String> fileList = new List<String>();
+            foreach (FileInfo nextFile in ImgFolderInfo.GetFiles())
+            {
+                fileList.Add(nextFile.FullName);
+            }
+
+            int imgCount = fileList.Count;
+            texList.Clear();
+
+            for (int i = 0; i < imgCount; i++)
+            {
+                String imgPath = fileList[i];
+                bool isExist = File.Exists(imgPath.ToString());
+                if (isExist)
+                {
+                    BitmapImage newImage = new BitmapImage(new Uri(imgPath, UriKind.Absolute));
+                    System.Drawing.Image srcImage = (System.Drawing.Image)BitmapImage2Bitmap(newImage);
+                    texList.Add(srcImage);
+                }
+
+            }
+            return true;
+        }
+
+
+        void LoadConfig()
+        {
+            String configPath = System.IO.Path.GetDirectoryName(Application.ResourceAssembly.Location) + @"/config.txt";
+            if (File.Exists(configPath))
+            {
+                StreamReader sr = new StreamReader(configPath, Encoding.Default);
+
+                string detectCenterX_S = null;
+                string detectCenterY_S = null;
+                string detectRadius_S = null;
+
+                int tempNum = -1;
+
+                if (sr.Peek() > 0)
+                {
+                    detectCenterX_S = sr.ReadLine();
+                    if (detectCenterX_S != "" || detectCenterX_S != null)
+                    {
+                        tempNum = GetNum(detectCenterX_S, "DetectCenterX");
+                        if (tempNum != -1)
+                        {
+                            detectCenter.X = tempNum / 100.0f;
+                        }
+                    }
+                }
+                if (sr.Peek() > 0)
+                {
+                    detectCenterY_S = sr.ReadLine();
+                    if (detectCenterY_S != "" || detectCenterY_S != null)
+                    {
+                        tempNum = GetNum(detectCenterY_S, "DetectCenterY");
+                        if (tempNum != -1)
+                        {
+                            detectCenter.Y = tempNum / 100.0f;
+                        }
+                    }
+                }
+                if (sr.Peek() > 0)
+                {
+                    detectRadius_S = sr.ReadLine();
+                    if (detectRadius_S != "" || detectRadius_S != null)
+                    {
+                        tempNum = GetNum(detectRadius_S, "DetectRadius");
+                        if (tempNum != -1)
+                        {
+                            detectRadius = tempNum / 100.0f;
+                        }
+                    }
+                }
+                sr.Close();
+
             }
         }
 
-        
-        
+        private int GetNum(string str, string markStr)
+        {
+            int num = -1;
+
+            string pattern = markStr + @":[0-9]*";
+            string result = Regex.Match(str, pattern).Value;
+            string patternGetNum = @"[0-9]\d*";
+            string num_result = Regex.Match(result, patternGetNum).Value;
+
+            num = System.Int32.Parse(num_result);
+            return num;
+        }
+
+
+        /// <summary>
+        /// Handles the color frame data arriving from the sensor
+        /// </summary>
+        /// <param name="sender">object sending the event</param>
+        /// <param name="e">event arguments</param>
+        private void Reader_ColorFrameArrived(object sender, ColorFrameArrivedEventArgs e)
+        {
+            // ColorFrame is IDisposable
+            using (ColorFrame colorFrame = e.FrameReference.AcquireFrame())
+            {
+                if (colorFrame != null)
+                {
+                    FrameDescription colorFrameDescription = colorFrame.FrameDescription;
+
+                    using (KinectBuffer colorBuffer = colorFrame.LockRawImageBuffer())
+                    {
+                        this.colorBitmap.Lock();
+
+                        // verify data and write the new color frame data to the display bitmap
+                        if ((colorFrameDescription.Width == this.colorBitmap.PixelWidth) && (colorFrameDescription.Height == this.colorBitmap.PixelHeight))
+                        {
+                            colorFrame.CopyConvertedFrameDataToIntPtr(
+                                this.colorBitmap.BackBuffer,
+                                (uint)(colorFrameDescription.Width * colorFrameDescription.Height * 4),
+                                ColorImageFormat.Bgra);
+
+                            this.colorBitmap.AddDirtyRect(new Int32Rect(0, 0, this.colorBitmap.PixelWidth, this.colorBitmap.PixelHeight));
+                        }
+
+                        this.colorBitmap.Unlock();
+                    }
+                }
+            }
+        }
+
+
+        /// <summary>
+        /// Execute start up tasks
+        /// </summary>
+        /// <param name="sender">object sending the event</param>
+        /// <param name="e">event arguments</param>
+        private void MainWindow_Loaded(object sender, RoutedEventArgs e)
+        {
+            if (this.bodyFrameReader != null)
+            {
+                this.bodyFrameReader.FrameArrived += this.Reader_FrameArrived;
+            }
+        }
+
+        /// <summary>
+        /// Execute shutdown tasks
+        /// </summary>
+        /// <param name="sender">object sending the event</param>
+        /// <param name="e">event arguments</param>
+        private void MainWindow_Closing(object sender, CancelEventArgs e)
+        {
+            if (this.bodyFrameReader != null)
+            {
+                // BodyFrameReader is IDisposable
+                this.bodyFrameReader.Dispose();
+                this.bodyFrameReader = null;
+            }
+
+            if (this.kinectSensor != null)
+            {
+                this.kinectSensor.Close();
+                this.kinectSensor = null;
+            }
+        }
+        /// <summary>
+        /// Handles the event which the sensor becomes unavailable (E.g. paused, closed, unplugged).
+        /// </summary>
+        /// <param name="sender">object sending the event</param>
+        /// <param name="e">event arguments</param>
+        private void Sensor_IsAvailableChanged(object sender, IsAvailableChangedEventArgs e)
+        {
+            // on failure, set the status text
+            this.StatusText = this.kinectSensor.IsAvailable ? Properties.Resources.RunningStatusText
+                                                            : Properties.Resources.SensorNotAvailableStatusText;
+        }
+
     }
 }

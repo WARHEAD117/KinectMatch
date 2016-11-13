@@ -5,8 +5,6 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
@@ -97,6 +95,47 @@ namespace Microsoft.Samples.Kinect.SkeletonRecord
                 dc.DrawImage(moveImageList[index], new Rect(x, y, w, h));
         }
 
+        public void DrawAnimPic_Clamp(DrawingContext dc, int dt, double x, double y, double w, double h, int startFrame, int endFrame)
+        {
+            if (startFrame > endFrame)
+                startFrame = endFrame;
+            if (startFrame < 0)
+                startFrame = 0;
+            if (endFrame >= moveImageList.Count)
+                endFrame = moveImageList.Count - 1;
+            if (startFrame >= moveImageList.Count)
+                startFrame = moveImageList.Count - 1;
+            if (endFrame < 0)
+                endFrame = 0;
+
+            timer += dt;
+            if (timer >= delay)
+            {
+                index += 1;
+                if (index > endFrame)
+                    index = endFrame;
+                if (index < startFrame)
+                    index = startFrame;
+                timer = 0;
+            }
+
+            if (moveImageList == null)
+                return;
+
+            if (index < 0)
+                index = 0;
+            if (index >= moveImageList.Count)
+                index = moveImageList.Count;
+            
+
+            if (moveImageList.Count > 0 && index < moveImageList.Count)
+                dc.DrawImage(moveImageList[index], new Rect(x, y, w, h));
+        }
+
+        public void ResetAnim()
+        {
+            index = 0;
+        }
 
         private bool LoadPic(string folderName, out List<BitmapImage> texList)
         {
